@@ -30,7 +30,7 @@ impl Parser {
                     match &token.literal {
                         Some(literal) => match literal {
                             Literal::Integer(integer) => println!("{}", integer),
-                            Literal::Float(float) => println!("{}", float),
+                            Literal::Float(float) => println!("{:?}", float),
                             _ => {}
                         }
 
