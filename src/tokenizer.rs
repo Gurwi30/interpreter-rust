@@ -193,6 +193,8 @@ impl Tokenizer {
         if self.is_at_end() {
             self.invalid = true;
             println!("[line {}] Error: Unterminated string", self.line);
+            
+            return;
         }
 
         self.poll();
