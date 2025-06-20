@@ -118,7 +118,7 @@ impl Display for Literal {
         match self {
             Literal::String(s) => write!(f, "{}", s),
             Literal::Integer(n) => write!(f, "{}", n),
-            Literal::Float(n) => write!(f, "{}", n),
+            Literal::Float(n) => write!(f, "{:?}", n),
             Literal::Boolean(b) => write!(f, "{}", b),
             Literal::Nil => write!(f, "null"),
         }
@@ -234,14 +234,14 @@ impl Tokenizer {
 
     fn number(&mut self) {
         let start = self.current_idx - 1;
-        let mut is_float = false;
+        //let mut is_float = false;
 
         while is_digit(self.peek()) {
             self.poll();
         }
 
         if self.peek() == '.' && is_digit(self.peek_next()) {
-            is_float = true;
+            //is_float = true;
             self.poll();
 
             while is_digit(self.peek()) {
