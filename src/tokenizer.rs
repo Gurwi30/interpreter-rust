@@ -6,22 +6,22 @@ use lazy_static::lazy_static;
 
 lazy_static! {
     pub static ref KEYWORDS: HashMap<&'static str, TokenType> = HashMap::from([
-        ("and", TokenType::AND),
-        ("class", TokenType::CLASS),
-        ("else", TokenType::ELSE),
-        ("false", TokenType::FALSE),
-        ("for", TokenType::FOR),
-        ("fun", TokenType::FUN),
-        ("if", TokenType::IF),
-        ("nil", TokenType::NIL),
-        ("or", TokenType::OR),
-        ("print", TokenType::PRINT),
-        ("return", TokenType::RETURN),
-        ("super", TokenType::SUPER),
-        ("this", TokenType::THIS),
-        ("true", TokenType::TRUE),
-        ("var", TokenType::VAR),
-        ("while", TokenType::WHILE),
+        ("and", TokenType::And),
+        ("class", TokenType::Class),
+        ("else", TokenType::Else),
+        ("false", TokenType::False),
+        ("for", TokenType::For),
+        ("fun", TokenType::Fun),
+        ("if", TokenType::If),
+        ("nil", TokenType::Nil),
+        ("or", TokenType::Or),
+        ("print", TokenType::Print),
+        ("return", TokenType::Return),
+        ("super", TokenType::Super),
+        ("this", TokenType::This),
+        ("true", TokenType::True),
+        ("var", TokenType::Var),
+        ("while", TokenType::While),
     ]);
 }
 
@@ -53,28 +53,28 @@ pub enum TokenType {
 
     // KEYWORDS
 
-    IF,
-    ELSE,
-    FOR,
-    WHILE,
+    If,
+    Else,
+    For,
+    While,
 
-    TRUE,
-    FALSE,
-    NIL,
+    True,
+    False,
+    Nil,
 
-    AND,
-    OR,
+    And,
+    Or,
 
-    FUN,
-    RETURN,
+    Fun,
+    Return,
 
-    CLASS,
-    SUPER,
-    THIS,
+    Class,
+    Super,
+    This,
 
-    VAR,
+    Var,
 
-    PRINT
+    Print
 }
 
 impl Display for TokenType {
@@ -104,22 +104,22 @@ impl Display for TokenType {
             TokenType::Identifier => write!(f, "IDENTIFIER"),
             TokenType::EOF => write!(f, "EOF"),
 
-            TokenType::IF => write!(f, "IF"),
-            TokenType::ELSE => write!(f, "ELSE"),
-            TokenType::FOR => write!(f, "FOR"),
-            TokenType::WHILE => write!(f, "WHILE"),
-            TokenType::TRUE => write!(f, "TRUE"),
-            TokenType::FALSE => write!(f, "FALSE"),
-            TokenType::NIL => write!(f, "NIL"),
-            TokenType::AND => write!(f, "AND"),
-            TokenType::OR => write!(f, "OR"),
-            TokenType::FUN => write!(f, "FUN"),
-            TokenType::RETURN => write!(f, "RETURN"),
-            TokenType::CLASS => write!(f, "CLASS"),
-            TokenType::SUPER => write!(f, "SUPER"),
-            TokenType::THIS => write!(f, "THIS"),
-            TokenType::VAR => write!(f, "VAR"),
-            TokenType::PRINT => write!(f, "PRINT"),
+            TokenType::If => write!(f, "IF"),
+            TokenType::Else => write!(f, "ELSE"),
+            TokenType::For => write!(f, "FOR"),
+            TokenType::While => write!(f, "WHILE"),
+            TokenType::True => write!(f, "TRUE"),
+            TokenType::False => write!(f, "FALSE"),
+            TokenType::Nil => write!(f, "NIL"),
+            TokenType::And => write!(f, "AND"),
+            TokenType::Or => write!(f, "OR"),
+            TokenType::Fun => write!(f, "FUN"),
+            TokenType::Return => write!(f, "RETURN"),
+            TokenType::Class => write!(f, "CLASS"),
+            TokenType::Super => write!(f, "SUPER"),
+            TokenType::This => write!(f, "THIS"),
+            TokenType::Var => write!(f, "VAR"),
+            TokenType::Print => write!(f, "PRINT"),
         }
     }
 }
@@ -163,6 +163,7 @@ impl FromStr for TokenType {
     }
 }
 
+#[derive(Clone)]
 pub struct Token {
     pub token_type: TokenType,
     pub lexeme: String,
@@ -177,6 +178,7 @@ impl Display for Token {
     }
 }
 
+#[derive(Clone)]
 pub enum Literal {
     String(String),
     Integer(isize),
@@ -342,7 +344,15 @@ impl Tokenizer {
         let lexeme = self.source.as_str()[start..self.current_idx].to_string();
         
         match KEYWORDS.get(lexeme.as_str()) { 
-            Some(keyword) => self.add_token(keyword.clone(), lexeme, None, self.line),
+            Some(keyword) => {
+                let literal: Option<Literal> = match keyword { 
+                    TokenType::True => Some(Literal::Boolean(true)),
+                    TokenType::False => Some(Literal::Boolean(false)),
+                    _ => None
+                };
+                
+                self.add_token(keyword.clone(), lexeme, literal, self.line)
+            },
             None => self.add_token(TokenType::Identifier, lexeme, None, self.line)
         }
     }

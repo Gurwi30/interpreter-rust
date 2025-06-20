@@ -1,9 +1,11 @@
 mod tokenizer;
+mod parser;
 
 use std::env;
 use std::fs;
 use std::io::{self, Write};
 use std::process::exit;
+use crate::parser::Parser;
 use crate::tokenizer::Tokenizer;
 
 fn main() {
@@ -41,6 +43,20 @@ fn main() {
             if tokenizer.invalid {
                 exit(65);
             }
+        }
+
+        "parse" => {
+            writeln!(io::stderr(), "Logs from your program will appear here!").unwrap();
+
+            let file_contents = fs::read_to_string(filename).unwrap_or_else(|_| {
+                writeln!(io::stderr(), "Failed to read file {}", filename).unwrap();
+                String::new()
+            });
+
+            let mut tokenizer = Tokenizer::new(file_contents);
+            let tokens = tokenizer.tokenize();
+
+            Parser::new(tokens.clone()).parse();
         }
         _ => {
             writeln!(io::stderr(), "Unknown command: {}", command).unwrap();
