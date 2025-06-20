@@ -246,6 +246,7 @@ impl Tokenizer {
         }
 
         let lexeme = self.source.as_str()[start..self.current_idx].to_string();
+        println!("[line {}] Number: {}", self.line, lexeme);
         let value = self.source.as_str()[start + 1..self.current_idx - 1].to_string().parse::<f64>().unwrap();
         
         self.add_token(TokenType::Number, lexeme, Some(Literal::Number(value)), self.line);
