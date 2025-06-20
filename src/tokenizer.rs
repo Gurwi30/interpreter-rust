@@ -102,14 +102,11 @@ impl Tokenizer {
                 Ok(token_type) => {
                     self.add_token(token_type, lexeme.to_string(), self.line);
                 },
+                
                 Err(_) => {
                     eprintln!("[line {}] Error: Unexpected character: {}", self.line, lexeme);
                 }
             }
-
-            let r#type = TokenType::from_str(next_val.as_str()).unwrap();
-            let lexeme = &self.source.to_string()[start..self.current_idx];
-            self.add_token(r#type, lexeme.to_string(), self.line);
         }
 
         self.add_token(TokenType::EOF, "".to_string(), self.line);
