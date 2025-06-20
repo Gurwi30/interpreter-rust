@@ -1,4 +1,5 @@
 use std::fmt::{Display, Formatter};
+use std::io;
 use std::str::FromStr;
 
 pub enum TokenType {
@@ -104,7 +105,7 @@ impl Tokenizer {
                 },
 
                 Err(_) => {
-                    eprintln!("[line {}] Error: Unexpected character: {}", self.line, lexeme);
+                    writeln!(io::stderr(), "[line {}] Error: Unexpected character: {}", self.line, lexeme).unwrap();
                 }
             }
         }
