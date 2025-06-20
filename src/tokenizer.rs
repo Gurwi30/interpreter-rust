@@ -107,7 +107,8 @@ impl Display for Token {
 
 pub enum Literal {
     String(String),
-    Number(f64),
+    Integer(isize),
+    Float(f64),
     Boolean(bool),
     Nil
 }
@@ -116,7 +117,8 @@ impl Display for Literal {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Literal::String(s) => write!(f, "{}", s),
-            Literal::Number(n) => write!(f, "{}", n),
+            Literal::Integer(n) => write!(f, "{}", n),
+            Literal::Float(n) => write!(f, "{}", n),
             Literal::Boolean(b) => write!(f, "{}", b),
             Literal::Nil => write!(f, "null"),
         }
@@ -232,12 +234,14 @@ impl Tokenizer {
 
     fn number(&mut self) {
         let start = self.current_idx - 1;
+        let mut is_float = false;
 
         while is_digit(self.peek()) {
             self.poll();
         }
 
         if self.peek() == '.' && is_digit(self.peek_next()) {
+            is_float = true;
             self.poll();
 
             while is_digit(self.peek()) {
@@ -247,9 +251,14 @@ impl Tokenizer {
 
         let lexeme = self.source.as_str()[start..self.current_idx].to_string();
         println!("[line {}] Number: {}", self.line, lexeme);
-        let value = self.source.as_str()[start + 1..self.current_idx - 1].to_string().parse::<f64>().unwrap();
+        let value = self.source.as_str()[start + 1..self.current_idx - 1].to_string();
         
-        self.add_token(TokenType::Number, lexeme, Some(Literal::Number(value)), self.line);
+        if !is_float {
+            self.add_token(TokenType::Number, lexeme, Some(Literal::Integer(value.parse::<isize>().unwrap())), self.line);
+            return;
+        }
+
+        self.add_token(TokenType::Number, lexeme, Some(Literal::Float(value.parse::<f64>().unwrap())), self.line);
     }
 
     fn add_token(&mut self, token_type: TokenType, lexeme: String, literal: Option<Literal>, line: usize) {
