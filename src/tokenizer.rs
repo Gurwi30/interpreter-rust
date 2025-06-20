@@ -133,16 +133,28 @@ impl Tokenizer {
                 _ => {
                     match TokenType::from_str(next_val.as_str()) {
                         Ok(token_type) => {
-                            let final_token = if self.match_next('=') {
-                                match token_type {
-                                    TokenType::Bang => TokenType::BangEqual,
-                                    TokenType::Equal => TokenType::EqualEqual,
-                                    TokenType::Greater => TokenType::GreaterEqual,
-                                    TokenType::Less => TokenType::LessEqual,
-                                    _ => token_type,
-                                }
-                            } else {
-                                token_type
+                            let final_token = match token_type {
+                                TokenType::Bang => match self.match_next('=') {
+                                    true => TokenType::BangEqual,
+                                    false => token_type,
+                                },
+
+                                TokenType::Equal => match self.match_next('=') {
+                                    true => TokenType::EqualEqual,
+                                    false => token_type,
+                                },
+
+                                TokenType::Greater => match self.match_next('=') {
+                                    true => TokenType::GreaterEqual,
+                                    false => token_type,
+                                },
+
+                                TokenType::Less => match self.match_next('=') {
+                                    true => TokenType::LessEqual,
+                                    false => token_type,
+                                },
+
+                                _ => token_type,
                             };
 
                             let lexeme = &self.source.to_string()[start..self.current_idx];
