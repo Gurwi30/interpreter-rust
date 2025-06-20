@@ -251,10 +251,10 @@ impl Tokenizer {
 
         let value = self.source.as_str()[start..self.current_idx].to_string();
         
-        if !is_float {
-            self.add_token(TokenType::Number, value.clone(), Some(Literal::Integer(value.parse::<isize>().unwrap())), self.line);
-            return;
-        }
+        // if !is_float {
+        //     self.add_token(TokenType::Number, value.clone(), Some(Literal::Integer(value.parse::<isize>().unwrap())), self.line);
+        //     return;
+        // }
 
         self.add_token(TokenType::Number, value.clone(), Some(Literal::Float(value.parse::<f64>().unwrap())), self.line);
     }
