@@ -1,7 +1,31 @@
 use std::cmp::PartialEq;
-use std::fmt::{Debug, Display, Formatter};
+use std::collections::HashMap;
+use std::fmt::{Display, Formatter };
 use std::str::FromStr;
+use lazy_static::lazy_static;
 
+lazy_static! {
+    pub static ref KEYWORDS: HashMap<&'static str, TokenType> = HashMap::from([
+        ("and", TokenType::AND),
+        ("class", TokenType::CLASS),
+        ("else", TokenType::ELSE),
+        ("false", TokenType::FALSE),
+        ("for", TokenType::FOR),
+        ("fun", TokenType::FUN),
+        ("if", TokenType::IF),
+        ("nil", TokenType::NIL),
+        ("or", TokenType::OR),
+        ("print", TokenType::PRINT),
+        ("return", TokenType::RETURN),
+        ("super", TokenType::SUPER),
+        ("this", TokenType::THIS),
+        ("true", TokenType::TRUE),
+        ("var", TokenType::VAR),
+        ("while", TokenType::WHILE),
+    ]);
+}
+
+#[derive(Clone)]
 pub enum TokenType {
     LeftParen,
     RightParen,
@@ -25,7 +49,32 @@ pub enum TokenType {
     String,
     Number,
     Identifier,
-    EOF
+    EOF,
+
+    // KEYWORDS
+
+    IF,
+    ELSE,
+    FOR,
+    WHILE,
+
+    TRUE,
+    FALSE,
+    NIL,
+
+    AND,
+    OR,
+
+    FUN,
+    RETURN,
+
+    CLASS,
+    SUPER,
+    THIS,
+
+    VAR,
+
+    PRINT
 }
 
 impl Display for TokenType {
@@ -54,6 +103,23 @@ impl Display for TokenType {
             TokenType::Number => write!(f, "NUMBER"),
             TokenType::Identifier => write!(f, "IDENTIFIER"),
             TokenType::EOF => write!(f, "EOF"),
+
+            TokenType::IF => write!(f, "IF"),
+            TokenType::ELSE => write!(f, "ELSE"),
+            TokenType::FOR => write!(f, "FOR"),
+            TokenType::WHILE => write!(f, "WHILE"),
+            TokenType::TRUE => write!(f, "TRUE"),
+            TokenType::FALSE => write!(f, "FALSE"),
+            TokenType::NIL => write!(f, "NIL"),
+            TokenType::AND => write!(f, "AND"),
+            TokenType::OR => write!(f, "OR"),
+            TokenType::FUN => write!(f, "FUN"),
+            TokenType::RETURN => write!(f, "RETURN"),
+            TokenType::CLASS => write!(f, "CLASS"),
+            TokenType::SUPER => write!(f, "SUPER"),
+            TokenType::THIS => write!(f, "THIS"),
+            TokenType::VAR => write!(f, "VAR"),
+            TokenType::PRINT => write!(f, "PRINT"),
         }
     }
 }
@@ -274,7 +340,11 @@ impl Tokenizer {
         }
 
         let lexeme = self.source.as_str()[start..self.current_idx].to_string();
-        self.add_token(TokenType::Identifier, lexeme, None, self.line);
+        
+        match KEYWORDS.get(lexeme.as_str()) { 
+            Some(keyword) => self.add_token(keyword.clone(), lexeme, None, self.line),
+            None => self.add_token(TokenType::Identifier, lexeme, None, self.line)
+        }
     }
 
     fn add_token(&mut self, token_type: TokenType, lexeme: String, literal: Option<Literal>, line: usize) {
