@@ -51,7 +51,7 @@ impl FromStr for TokenType {
             "-" => Ok(TokenType::Minus),
             "*" => Ok(TokenType::Star),
             "/" => Ok(TokenType::Slash),
-            _ => Ok(TokenType::EOF)
+            _ => Err(())
         }
     }
 }
@@ -94,6 +94,17 @@ impl Tokenizer {
             if next_val == "\n" {
                 self.line += 1;
                 continue;
+            }
+
+            let lexeme = &self.source.to_string()[start..self.current_idx];
+
+            match TokenType::from_str(next_val.as_str()) {
+                Ok(token_type) => {
+                    self.add_token(token_type, lexeme.to_string(), self.line);
+                },
+                Err(_) => {
+                    eprintln!("[line {}] Error: Unexpected character: {}", self.line, lexeme);
+                }
             }
 
             let r#type = TokenType::from_str(next_val.as_str()).unwrap();
