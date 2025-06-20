@@ -42,7 +42,7 @@ impl Display for TokenType {
             TokenType::Equal => write!(f, "EQUAL"),
             TokenType::EqualEqual => write!(f, "EQUAL_EQUAL"),
             TokenType::Bang => write!(f, "BANG"),
-            TokenType::BangEqual => write!(f, "NOTEQUAL"),
+            TokenType::BangEqual => write!(f, "BANG_EQUAL"),
             TokenType::Greater => write!(f, "GREATER"),
             TokenType::GreaterEqual => write!(f, "GREATER_EQUAL"),
             TokenType::Less => write!(f, "LESS"),
