@@ -143,16 +143,19 @@ impl Tokenizer {
 
                             let lexeme = &self.source.to_string()[start..self.current_idx];
 
-                            if final_token == TokenType::Slash {
-                                if !self.match_next('/') {
-                                    self.add_token(final_token, lexeme.to_string(), self.line);
-                                    continue;
-                                }
+                            match final_token { 
+                                TokenType::Slash => {
+                                    if !self.match_next('/') {
+                                        self.add_token(final_token, lexeme.to_string(), self.line);
+                                        continue;
+                                    }
 
-                                while self.peek() != '\n' && !self.is_at_end() {
-                                    self.poll();
-                                    print!("{}", self.peek())
-                                }
+                                    while self.peek() != '\n' && !self.is_at_end() {
+                                        self.poll();
+                                    }
+                                },
+                                
+                                _ => self.add_token(final_token, lexeme.to_string(), self.line)
                             }
                         },
 
@@ -187,7 +190,7 @@ impl Tokenizer {
             return '\0';
         }
 
-        return self.source.chars().nth(self.current_idx).unwrap();
+        self.source.chars().nth(self.current_idx).unwrap()
     }
 
     fn match_next(&mut self, expected: char) -> bool {
