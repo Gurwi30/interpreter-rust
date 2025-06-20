@@ -3,6 +3,7 @@ mod tokenizer;
 use std::env;
 use std::fs;
 use std::io::{self, Write};
+use std::process::exit;
 use crate::tokenizer::Tokenizer;
 
 fn main() {
@@ -35,6 +36,10 @@ fn main() {
             
             for token in tokens {
                 println!("{}", token);
+            }
+
+            if tokenizer.invalid {
+                exit(65);
             }
         }
         _ => {

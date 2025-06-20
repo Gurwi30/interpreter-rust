@@ -1,5 +1,4 @@
 use std::fmt::{Display, Formatter};
-use std::io;
 use std::str::FromStr;
 
 pub enum TokenType {
@@ -73,6 +72,7 @@ pub struct Tokenizer {
     tokens: Vec<Token>,
     current_idx: usize,
     line: usize,
+    pub invalid: bool,
     source: String
 }
 
@@ -83,6 +83,7 @@ impl Tokenizer {
             tokens: Vec::new(),
             current_idx: 0,
             line: 1,
+            invalid: false,
             source
         }
     }
@@ -105,7 +106,8 @@ impl Tokenizer {
                 },
 
                 Err(_) => {
-                    writeln!(io::stderr(), "[line {}] Error: Unexpected character: {}", self.line, lexeme).unwrap();
+                    self.invalid = true;
+                    eprintln!("[line {}] Error: Unexpected character: {}", self.line, lexeme);
                 }
             }
         }
