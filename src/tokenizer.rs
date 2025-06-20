@@ -134,26 +134,10 @@ impl Tokenizer {
                     match TokenType::from_str(next_val.as_str()) {
                         Ok(token_type) => {
                             let final_token = match token_type {
-                                TokenType::Bang => match self.match_next('=') {
-                                    true => TokenType::BangEqual,
-                                    false => token_type,
-                                },
-
-                                TokenType::Equal => match self.match_next('=') {
-                                    true => TokenType::EqualEqual,
-                                    false => token_type,
-                                },
-
-                                TokenType::Greater => match self.match_next('=') {
-                                    true => TokenType::GreaterEqual,
-                                    false => token_type,
-                                },
-
-                                TokenType::Less => match self.match_next('=') {
-                                    true => TokenType::LessEqual,
-                                    false => token_type,
-                                },
-
+                                TokenType::Bang if self.match_next('=') => TokenType::BangEqual,
+                                TokenType::Equal if self.match_next('=') => TokenType::EqualEqual,
+                                TokenType::Greater if self.match_next('=') => TokenType::GreaterEqual,
+                                TokenType::Less if self.match_next('=') => TokenType::LessEqual,
                                 _ => token_type,
                             };
 
