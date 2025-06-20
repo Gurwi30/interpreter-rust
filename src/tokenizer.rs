@@ -125,7 +125,7 @@ impl Tokenizer {
     pub fn tokenize(&mut self) -> &Vec<Token> {
         while self.current_idx < self.source.chars().count() {
             let start = self.current_idx;
-            let next_val: String = self.get_next();
+            let next_val: String = self.poll();
 
             match next_val.as_str() {
                 " " | "\t" | "\r" => {},
@@ -142,7 +142,17 @@ impl Tokenizer {
                             };
 
                             let lexeme = &self.source.to_string()[start..self.current_idx];
-                            self.add_token(final_token, lexeme.to_string(), self.line);
+
+                            if final_token == TokenType::Slash {
+                                if !self.match_next('/') {
+                                    self.add_token(final_token, lexeme.to_string(), self.line);
+                                    continue;
+                                }
+
+                                while self.peek() != '\n' && !self.is_at_end() {
+                                    self.poll();
+                                }
+                            }
                         },
 
                         Err(_) => {
@@ -162,13 +172,21 @@ impl Tokenizer {
         self.tokens.push(Token { token_type, lexeme, line });
     }
 
-    fn get_next(&mut self) -> String {
+    fn poll(&mut self) -> String {
         self.current_idx += 1;
 
         self.source.chars()
             .nth(self.current_idx - 1)
             .unwrap()
             .to_string()
+    }
+
+    fn peek(&self) -> char {
+        if self.is_at_end() {
+            return '\0';
+        }
+
+        return self.source.chars().nth(self.current_idx).unwrap();
     }
 
     fn match_next(&mut self, expected: char) -> bool {
