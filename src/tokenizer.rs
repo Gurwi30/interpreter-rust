@@ -249,16 +249,14 @@ impl Tokenizer {
             }
         }
 
-        let lexeme = self.source.as_str()[start..self.current_idx].to_string();
-        println!("[line {}] Number: {}", self.line, lexeme);
-        let value = self.source.as_str()[start + 1..self.current_idx - 1].to_string();
+        let value = self.source.as_str()[start..self.current_idx].to_string();
         
         if !is_float {
-            self.add_token(TokenType::Number, lexeme, Some(Literal::Integer(value.parse::<isize>().unwrap())), self.line);
+            self.add_token(TokenType::Number, value.clone(), Some(Literal::Integer(value.parse::<isize>().unwrap())), self.line);
             return;
         }
 
-        self.add_token(TokenType::Number, lexeme, Some(Literal::Float(value.parse::<f64>().unwrap())), self.line);
+        self.add_token(TokenType::Number, value.clone(), Some(Literal::Float(value.parse::<f64>().unwrap())), self.line);
     }
 
     fn add_token(&mut self, token_type: TokenType, lexeme: String, literal: Option<Literal>, line: usize) {
