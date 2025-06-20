@@ -1,6 +1,9 @@
+mod tokenizer;
+
 use std::env;
 use std::fs;
 use std::io::{self, Write};
+use crate::tokenizer::Tokenizer;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -26,8 +29,13 @@ fn main() {
                 println!("EOF  null");
                 return;
             }
+
+            let mut tokenizer = Tokenizer::new(file_contents);
+            let tokens = tokenizer.tokenize();
             
-            panic!("Scanner not implemented");
+            for token in tokens {
+                println!("{}", token);
+            }
         }
         _ => {
             writeln!(io::stderr(), "Unknown command: {}", command).unwrap();
