@@ -151,6 +151,7 @@ impl Tokenizer {
 
                                 while self.peek() != '\n' && !self.is_at_end() {
                                     self.poll();
+                                    print!("{}", self.peek())
                                 }
                             }
                         },
