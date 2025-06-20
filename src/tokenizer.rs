@@ -62,7 +62,7 @@ impl FromStr for TokenType {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.chars().all(char::is_alphabetic) {
+        if s.chars().all(|c| is_alpha(c)) {
             return Ok(TokenType::Identifier);
         }
 
@@ -269,7 +269,7 @@ impl Tokenizer {
     fn identifier(&mut self) {
         let start = self.current_idx - 1;
 
-        while self.peek().is_alphanumeric() {
+        while is_digit(self.peek()) {
             self.poll();
         }
 
@@ -321,12 +321,12 @@ fn is_digit(c: char) -> bool {
     c >= '0' && c <= '9'
 }
 
-// fn is_alpha(c: char) -> bool {
-//     (c >= 'a' && c <= 'z') ||
-//         (c >= 'A' && c <= 'Z') ||
-//         c == '_'
-// }
-//
-// fn is_alphanumeric(c: char) -> bool {
-//     is_alpha(c) || is_digit(c)
-// }
+fn is_alpha(c: char) -> bool {
+    (c >= 'a' && c <= 'z') ||
+        (c >= 'A' && c <= 'Z') ||
+        c == '_'
+}
+
+fn is_alphanumeric(c: char) -> bool {
+    is_alpha(c) || is_digit(c)
+}
