@@ -26,7 +26,18 @@ impl Parser {
                 TokenType::True => println!("true"),
                 TokenType::False => println!("false"),
                 TokenType::Nil => println!("nil"),
-                _ => { }
+                TokenType::Number => {
+                    match &token.literal {
+                        Some(literal) => match literal {
+                            Literal::Integer(integer) => println!("{}", integer),
+                            Literal::Float(float) => println!("{}", float),
+                            _ => {}
+                        }
+
+                        None => {}
+                    }
+                }
+                _ => {}
             }
         }
     }
