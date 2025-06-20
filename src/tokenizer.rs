@@ -128,7 +128,7 @@ impl Tokenizer {
     }
 
     pub fn tokenize(&mut self) -> &Vec<Token> {
-        while !self.is_at_end() {
+        while self.current_idx < self.source.chars().count() - 1 {
             let start = self.current_idx;
             let next_val: String = self.poll();
 
