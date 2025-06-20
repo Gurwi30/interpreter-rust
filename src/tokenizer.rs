@@ -128,7 +128,7 @@ impl Tokenizer {
     }
 
     pub fn tokenize(&mut self) -> &Vec<Token> {
-        while self.current_idx < self.source.chars().count() - 1 {
+        while self.current_idx < self.source.chars().count() {
             let start = self.current_idx;
             let next_val: String = self.poll();
 
@@ -195,7 +195,7 @@ impl Tokenizer {
             println!("[line {}] Error: Unterminated string", self.line);
         }
 
-        self.poll();
+        //self.poll();
 
         let lexeme = self.source.as_str()[start..self.current_idx].to_string();
         let value = self.source.as_str()[start + 1..self.current_idx - 1].to_string();
