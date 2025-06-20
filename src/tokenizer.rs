@@ -88,12 +88,14 @@ impl FromStr for TokenType {
 pub struct Token {
     pub token_type: TokenType,
     pub lexeme: String,
+    pub literal: Option<String>,
     pub line: usize
 }
 
 impl Display for Token {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} {} {}", self.token_type, self.lexeme, "null")
+        let literal = self.literal.as_deref().unwrap_or("null");
+        write!(f, "{} {} {}", self.token_type, self.lexeme, literal)
     }
 }
 
@@ -149,7 +151,7 @@ impl Tokenizer {
                             match final_token {
                                 TokenType::Slash => {
                                     if !self.match_next('/') {
-                                        self.add_token(final_token, lexeme.to_string(), self.line);
+                                        self.add_token(final_token, lexeme.to_string(), None, self.line);
                                         continue;
                                     }
 
@@ -160,7 +162,7 @@ impl Tokenizer {
                                 
                                 TokenType::String => self.string(),
 
-                                _ => self.add_token(final_token, lexeme.to_string(), self.line)
+                                _ => self.add_token(final_token, lexeme.to_string(), None, self.line)
                             }
                         },
 
@@ -173,12 +175,12 @@ impl Tokenizer {
             }
         }
 
-        self.add_token(TokenType::EOF, "".to_string(), self.line);
+        self.add_token(TokenType::EOF, "".to_string(), None, self.line);
         &self.tokens
     }
 
     fn string(&mut self) {
-        let start = self.current_idx;
+        let start = self.current_idx - 1;
         
         while self.peek() != '"' && !self.is_at_end() {
             if self.peek() == '\n' {
@@ -194,13 +196,15 @@ impl Tokenizer {
         }
 
         self.poll();
+
+        let lexeme = self.source.as_str()[start..self.current_idx].to_string();
+        let value = self.source.as_str()[start + 1..self.current_idx - 1].to_string();
         
-        let value = self.source.as_str()[start..self.current_idx- 1].to_string();
-        self.add_token(TokenType::String, value, self.line);
+        self.add_token(TokenType::String, lexeme, Some(value), self.line);
     }
 
-    fn add_token(&mut self, token_type: TokenType, lexeme: String, line: usize) {
-        self.tokens.push(Token { token_type, lexeme, line });
+    fn add_token(&mut self, token_type: TokenType, lexeme: String, literal: Option<String>, line: usize) {
+        self.tokens.push(Token { token_type, lexeme, literal, line });
     }
 
     fn poll(&mut self) -> String {
