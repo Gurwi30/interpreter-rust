@@ -24,6 +24,7 @@ impl Parser {
             
             match token.literal { 
                 Some(Literal::Boolean(s)) => println!("{}", s),
+                Some(Literal::Nil) => println!("nil"),
                 _ => { }
             }
         }
