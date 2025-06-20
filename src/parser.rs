@@ -26,6 +26,11 @@ impl Parser {
                 TokenType::True => println!("true"),
                 TokenType::False => println!("false"),
                 TokenType::Nil => println!("nil"),
+                TokenType::String => {
+                    if let Some(Literal::String(s)) = &token.literal {
+                        println!("{}", s);
+                    }
+                },
                 TokenType::Number => {
                     match &token.literal {
                         Some(literal) => match literal {
