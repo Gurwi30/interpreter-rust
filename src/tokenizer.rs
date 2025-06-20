@@ -1,3 +1,4 @@
+use std::cmp::PartialEq;
 use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
 
@@ -81,6 +82,30 @@ impl FromStr for TokenType {
     }
 }
 
+impl TokenType {
+    fn get_complementary(&self) -> Option<(TokenType, TokenType)> {
+        match self {
+            TokenType::Bang => {
+                Some((TokenType::Equal, TokenType::BangEqual))
+            },
+            
+            TokenType::Equal => {
+                Some((TokenType::Equal, TokenType::EqualEqual))
+            }
+            
+            TokenType::Greater => {
+                Some((TokenType::Equal, TokenType::GreaterEqual))
+            }
+            
+            TokenType::Less => {
+                Some((TokenType::Equal, TokenType::LessEqual))
+            }
+
+            _ => None
+        }
+    }
+}
+
 pub struct Token {
     pub token_type: TokenType,
     pub lexeme: String,
@@ -100,6 +125,12 @@ pub struct Tokenizer {
     pub invalid: bool,
     source_size: usize,
     source: String,
+}
+
+impl PartialEq for TokenType {
+    fn eq(&self, other: &Self) -> bool {
+        self == other
+    }
 }
 
 impl Tokenizer {
@@ -128,22 +159,15 @@ impl Tokenizer {
 
                     match TokenType::from_str(next_val.as_str()) {
                         Ok(token_type) => {
-                            match token_type {
-                                TokenType::Bang => {
-                                    self.add_token(if self.match_next('=') { TokenType::BangEqual } else { TokenType::Bang }, lexeme.to_string(), self.line);
-                                },
+                            match token_type.get_complementary() { 
+                                Some((c_type, new_type)) => {
+                                    if TokenType::from_str(self.get_next().as_str()).unwrap() == c_type {
+                                        let lexeme = &self.source.to_string()[start..self.current_idx];
+                                        self.add_token(new_type, lexeme.to_string(), self.line);
+                                    }
 
-                                TokenType::Equal => {
-                                    self.add_token(if self.match_next('=') { TokenType::EqualEqual } else { TokenType::Equal }, lexeme.to_string(), self.line);
+                                    self.add_token(token_type, lexeme.to_string(), self.line);
                                 },
-
-                                TokenType::Greater => {
-                                    self.add_token(if self.match_next('=') { TokenType::GreaterEqual } else { TokenType::Greater }, lexeme.to_string(), self.line);
-                                },
-
-                                TokenType::Less => {
-                                    self.add_token(if self.match_next('=') { TokenType::LessEqual } else { TokenType::Less }, lexeme.to_string(), self.line);
-                                }
 
                                 _ => self.add_token(token_type, lexeme.to_string(), self.line)
                             }
@@ -176,12 +200,17 @@ impl Tokenizer {
             .to_string()
     }
 
-    fn match_next(&self, expected: char) -> bool {
+    fn match_next(&mut self, expected: char) -> bool {
         if self.is_at_end() {
             return false;
         }
 
-        self.source.chars().nth(self.current_idx) == Option::from(expected)
+        if self.source.chars().nth(self.current_idx) != Option::from(expected) {
+            return false;
+        }
+
+        self.current_idx += 1;
+        true
     }
 
     fn is_at_end(&self) -> bool {
