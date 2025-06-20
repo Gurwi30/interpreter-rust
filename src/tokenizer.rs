@@ -28,6 +28,8 @@ impl FromStr for TokenType {
         match s {
             "(" => Ok(TokenType::LeftParen),
             ")" => Ok(TokenType::RightParen),
+            "{" => Ok(TokenType::LeftBrace),
+            "}" => Ok(TokenType::RightBrace),
             _ => Ok(TokenType::EOF)
         }
     }
