@@ -4,6 +4,8 @@ use std::str::FromStr;
 pub enum TokenType {
     LeftParen,
     RightParen,
+    LeftBrace,
+    RightBrace,
     EOF
 }
 
@@ -12,6 +14,8 @@ impl Display for TokenType {
         match self {
             TokenType::LeftParen => write!(f, "LEFT_PAREN"),
             TokenType::RightParen => write!(f, "RIGHT_PAREN"),
+            TokenType::LeftBrace => write!(f, "LEFT_BRACE"),
+            TokenType::RightBrace => write!(f, "RIGHT_BRACE"),
             TokenType::EOF => write!(f, "EOF"),
         }
     }
@@ -73,7 +77,7 @@ impl Tokenizer {
             let lexeme = &self.source.to_string()[start..self.current_idx];
             self.add_token(r#type, lexeme.to_string(), self.line);
         }
-        
+
         self.add_token(TokenType::EOF, "".to_string(), self.line);
         &self.tokens
     }
