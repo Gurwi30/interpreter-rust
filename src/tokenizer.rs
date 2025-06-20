@@ -344,16 +344,7 @@ impl Tokenizer {
         let lexeme = self.source.as_str()[start..self.current_idx].to_string();
         
         match KEYWORDS.get(lexeme.as_str()) { 
-            Some(keyword) => {
-                let literal: Option<Literal> = match keyword { 
-                    TokenType::True => Some(Literal::Boolean(true)),
-                    TokenType::False => Some(Literal::Boolean(false)),
-                    TokenType::Nil => Some(Literal::Nil),
-                    _ => None
-                };
-                
-                self.add_token(keyword.clone(), lexeme, literal, self.line)
-            },
+            Some(keyword) => self.add_token(keyword.clone(), lexeme, None, self.line),
             None => self.add_token(TokenType::Identifier, lexeme, None, self.line)
         }
     }

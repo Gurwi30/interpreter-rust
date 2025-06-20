@@ -22,9 +22,10 @@ impl Parser {
         while self.cur_idx < self.tokens.len() {
             let token = self.consume();
             
-            match token.literal { 
-                Some(Literal::Boolean(s)) => println!("{}", s),
-                Some(Literal::Nil) => println!("nil"),
+            match token.token_type { 
+                TokenType::True => println!("true"),
+                TokenType::False => println!("false"),
+                TokenType::Nil => println!("nil"),
                 _ => { }
             }
         }
