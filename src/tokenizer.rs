@@ -23,6 +23,7 @@ pub enum TokenType {
     Less,
     LessEqual,
     String,
+    Number,
     EOF
 }
 
@@ -49,6 +50,7 @@ impl Display for TokenType {
             TokenType::Less => write!(f, "LESS"),
             TokenType::LessEqual => write!(f, "LESS_EQUAL"),
             TokenType::String => write!(f, "STRING"),
+            TokenType::Number => write!(f, "NUMBER"),
             TokenType::EOF => write!(f, "EOF"),
         }
     }
@@ -58,6 +60,10 @@ impl FromStr for TokenType {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.trim().parse::<f64>().is_ok() {
+            return Ok(TokenType::Number)
+        }
+
         match s {
             "(" => Ok(TokenType::LeftParen),
             ")" => Ok(TokenType::RightParen),
@@ -88,14 +94,32 @@ impl FromStr for TokenType {
 pub struct Token {
     pub token_type: TokenType,
     pub lexeme: String,
-    pub literal: Option<String>,
+    pub literal: Option<Literal>,
     pub line: usize
 }
 
 impl Display for Token {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let literal = self.literal.as_deref().unwrap_or("null");
+        let literal = self.literal.as_ref().unwrap_or(&Literal::Nil);
         write!(f, "{} {} {}", self.token_type, self.lexeme, literal)
+    }
+}
+
+pub enum Literal {
+    String(String),
+    Number(f64),
+    Boolean(bool),
+    Nil
+}
+
+impl Display for Literal {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Literal::String(s) => write!(f, "{}", s),
+            Literal::Number(n) => write!(f, "{}", n),
+            Literal::Boolean(b) => write!(f, "{}", b),
+            Literal::Nil => write!(f, "null"),
+        }
     }
 }
 
@@ -159,8 +183,9 @@ impl Tokenizer {
                                         self.poll();
                                     }
                                 },
-                                
+
                                 TokenType::String => self.string(),
+                                TokenType::Number => self.number(),
 
                                 _ => self.add_token(final_token, lexeme.to_string(), None, self.line)
                             }
@@ -181,7 +206,7 @@ impl Tokenizer {
 
     fn string(&mut self) {
         let start = self.current_idx - 1;
-        
+
         while self.peek() != '"' && !self.is_at_end() {
             if self.peek() == '\n' {
                 self.line += 1;
@@ -193,7 +218,7 @@ impl Tokenizer {
         if self.is_at_end() {
             self.invalid = true;
             eprintln!("[line {}] Error: Unterminated string.", self.line);
-            
+
             return;
         }
 
@@ -201,11 +226,32 @@ impl Tokenizer {
 
         let lexeme = self.source.as_str()[start..self.current_idx].to_string();
         let value = self.source.as_str()[start + 1..self.current_idx - 1].to_string();
-        
-        self.add_token(TokenType::String, lexeme, Some(value), self.line);
+
+        self.add_token(TokenType::String, lexeme, Some(Literal::String(value)), self.line);
     }
 
-    fn add_token(&mut self, token_type: TokenType, lexeme: String, literal: Option<String>, line: usize) {
+    fn number(&mut self) {
+        let start = self.current_idx - 1;
+
+        while is_digit(self.peek()) {
+            self.poll();
+        }
+
+        if self.peek() == '.' && is_digit(self.peek_next()) {
+            self.poll();
+
+            while is_digit(self.peek()) {
+                self.poll();
+            }
+        }
+
+        let lexeme = self.source.as_str()[start..self.current_idx].to_string();
+        let value = self.source.as_str()[start + 1..self.current_idx - 1].to_string().parse::<f64>().unwrap();
+        
+        self.add_token(TokenType::Number, lexeme, Some(Literal::Number(value)), self.line);
+    }
+
+    fn add_token(&mut self, token_type: TokenType, lexeme: String, literal: Option<Literal>, line: usize) {
         self.tokens.push(Token { token_type, lexeme, literal, line });
     }
 
@@ -219,11 +265,11 @@ impl Tokenizer {
     }
 
     fn peek(&self) -> char {
-        if self.is_at_end() {
-            return '\0';
-        }
+        self.source.chars().nth(self.current_idx).unwrap_or('\n')
+    }
 
-        self.source.chars().nth(self.current_idx).unwrap()
+    fn peek_next(&self) -> char {
+        self.source.chars().nth(self.current_idx + 1).unwrap_or('\0')
     }
 
     fn match_next(&mut self, expected: char) -> bool {
@@ -243,4 +289,8 @@ impl Tokenizer {
         self.current_idx >= self.source_size
     }
 
+}
+
+fn is_digit(c: char) -> bool {
+    return c >= '0' && c <= '9';
 }
