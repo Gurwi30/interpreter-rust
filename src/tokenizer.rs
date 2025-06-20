@@ -82,30 +82,6 @@ impl FromStr for TokenType {
     }
 }
 
-impl TokenType {
-    fn get_complementary(&self) -> Option<(TokenType, TokenType)> {
-        match self {
-            TokenType::Bang => {
-                Some((TokenType::Equal, TokenType::BangEqual))
-            },
-            
-            TokenType::Equal => {
-                Some((TokenType::Equal, TokenType::EqualEqual))
-            }
-            
-            TokenType::Greater => {
-                Some((TokenType::Equal, TokenType::GreaterEqual))
-            }
-            
-            TokenType::Less => {
-                Some((TokenType::Equal, TokenType::LessEqual))
-            }
-
-            _ => None
-        }
-    }
-}
-
 pub struct Token {
     pub token_type: TokenType,
     pub lexeme: String,
@@ -152,35 +128,34 @@ impl Tokenizer {
             let next_val: String = self.get_next();
 
             match next_val.as_str() {
-                " " | "\t" | "\r" => { },
+                " " | "\t" | "\r" => {},
                 "\n" => self.line += 1,
                 _ => {
-                    let lexeme = &self.source.to_string()[start..self.current_idx];
-
                     match TokenType::from_str(next_val.as_str()) {
                         Ok(token_type) => {
-                            match token_type.get_complementary() { 
-                                Some((c_type, new_type)) => {
-                                    if TokenType::from_str(self.get_next().as_str()).unwrap() == c_type {
-                                        let lexeme = &self.source.to_string()[start..self.current_idx];
-                                        self.add_token(new_type, lexeme.to_string(), self.line);
-                                    }
+                            let final_token = if self.match_next('=') {
+                                match token_type {
+                                    TokenType::Bang => TokenType::BangEqual,
+                                    TokenType::Equal => TokenType::EqualEqual,
+                                    TokenType::Greater => TokenType::GreaterEqual,
+                                    TokenType::Less => TokenType::LessEqual,
+                                    _ => token_type,
+                                }
+                            } else {
+                                token_type
+                            };
 
-                                    self.add_token(token_type, lexeme.to_string(), self.line);
-                                },
-
-                                _ => self.add_token(token_type, lexeme.to_string(), self.line)
-                            }
+                            let lexeme = &self.source.to_string()[start..self.current_idx];
+                            self.add_token(final_token, lexeme.to_string(), self.line);
                         },
 
                         Err(_) => {
                             self.invalid = true;
-                            eprintln!("[line {}] Error: Unexpected character: {}", self.line, lexeme);
+                            eprintln!("[line {}] Error: Unexpected character: {}", self.line, self.source.chars().nth(start).unwrap());
                         }
                     }
                 }
             }
-
         }
 
         self.add_token(TokenType::EOF, "".to_string(), self.line);
