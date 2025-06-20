@@ -25,10 +25,10 @@ fn main() {
                 String::new()
             });
 
-            if file_contents.is_empty() {
-                println!("EOF  null");
-                return;
-            }
+            // if file_contents.is_empty() {
+            //     println!("EOF  null");
+            //     return;
+            // }
 
             let mut tokenizer = Tokenizer::new(file_contents);
             let tokens = tokenizer.tokenize();
