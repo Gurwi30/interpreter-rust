@@ -22,6 +22,7 @@ pub enum TokenType {
     GreaterEqual,
     Less,
     LessEqual,
+    String,
     EOF
 }
 
@@ -47,6 +48,7 @@ impl Display for TokenType {
             TokenType::GreaterEqual => write!(f, "GREATER_EQUAL"),
             TokenType::Less => write!(f, "LESS"),
             TokenType::LessEqual => write!(f, "LESS_EQUAL"),
+            TokenType::String => write!(f, "STRING"),
             TokenType::EOF => write!(f, "EOF"),
         }
     }
@@ -76,6 +78,7 @@ impl FromStr for TokenType {
             ">=" => Ok(TokenType::GreaterEqual),
             "<" => Ok(TokenType::Less),
             "<=" => Ok(TokenType::LessEqual),
+            "\"" => Ok(TokenType::String),
             "EOF" => Ok(TokenType::EOF),
             _ => Err(())
         }
@@ -143,7 +146,7 @@ impl Tokenizer {
 
                             let lexeme = &self.source.to_string()[start..self.current_idx];
 
-                            match final_token { 
+                            match final_token {
                                 TokenType::Slash => {
                                     if !self.match_next('/') {
                                         self.add_token(final_token, lexeme.to_string(), self.line);
@@ -155,6 +158,8 @@ impl Tokenizer {
                                     }
                                 },
                                 
+                                TokenType::String => self.string(),
+
                                 _ => self.add_token(final_token, lexeme.to_string(), self.line)
                             }
                         },
@@ -170,6 +175,28 @@ impl Tokenizer {
 
         self.add_token(TokenType::EOF, "".to_string(), self.line);
         &self.tokens
+    }
+
+    fn string(&mut self) {
+        let start = self.current_idx;
+        
+        while self.peek() != '"' && !self.is_at_end() {
+            if self.peek() == '\n' {
+                self.line += 1;
+            }
+
+            self.poll();
+        }
+
+        if self.is_at_end() {
+            self.invalid = true;
+            println!("[line {}] Error: Unterminated string", self.line);
+        }
+
+        self.poll();
+        
+        let value = self.source.as_str()[start..self.current_idx- 1].to_string();
+        self.add_token(TokenType::String, value, self.line);
     }
 
     fn add_token(&mut self, token_type: TokenType, lexeme: String, line: usize) {
@@ -209,4 +236,5 @@ impl Tokenizer {
     fn is_at_end(&self) -> bool {
         self.current_idx >= self.source_size
     }
+
 }
