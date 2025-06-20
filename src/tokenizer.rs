@@ -102,7 +102,7 @@ impl Tokenizer {
                 Ok(token_type) => {
                     self.add_token(token_type, lexeme.to_string(), self.line);
                 },
-                
+
                 Err(_) => {
                     eprintln!("[line {}] Error: Unexpected character: {}", self.line, lexeme);
                 }
