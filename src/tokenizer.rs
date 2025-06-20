@@ -1,4 +1,4 @@
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
 
 pub enum TokenType {
@@ -13,6 +13,14 @@ pub enum TokenType {
     Minus,
     Star,
     Slash,
+    Bang,
+    Equal,
+    EqualEqual,
+    BangEqual,
+    Greater,
+    GreaterEqual,
+    Less,
+    LessEqual,
     EOF
 }
 
@@ -30,6 +38,14 @@ impl Display for TokenType {
             TokenType::Minus => write!(f, "MINUS"),
             TokenType::Star => write!(f, "STAR"),
             TokenType::Slash => write!(f, "SLASH"),
+            TokenType::Equal => write!(f, "EQUAL"),
+            TokenType::EqualEqual => write!(f, "EQUAL_EQUAL"),
+            TokenType::Bang => write!(f, "BANG"),
+            TokenType::BangEqual => write!(f, "NOTEQUAL"),
+            TokenType::Greater => write!(f, "GREATER"),
+            TokenType::GreaterEqual => write!(f, "GREATER_EQUAL"),
+            TokenType::Less => write!(f, "LESS"),
+            TokenType::LessEqual => write!(f, "LESS_EQUAL"),
             TokenType::EOF => write!(f, "EOF"),
         }
     }
@@ -51,6 +67,15 @@ impl FromStr for TokenType {
             "-" => Ok(TokenType::Minus),
             "*" => Ok(TokenType::Star),
             "/" => Ok(TokenType::Slash),
+            "=" => Ok(TokenType::Equal),
+            "==" => Ok(TokenType::EqualEqual),
+            "!" => Ok(TokenType::Bang),
+            "!=" => Ok(TokenType::BangEqual),
+            ">" => Ok(TokenType::Greater),
+            ">=" => Ok(TokenType::GreaterEqual),
+            "<" => Ok(TokenType::Less),
+            "<=" => Ok(TokenType::LessEqual),
+            "EOF" => Ok(TokenType::EOF),
             _ => Err(())
         }
     }
@@ -73,7 +98,8 @@ pub struct Tokenizer {
     current_idx: usize,
     line: usize,
     pub invalid: bool,
-    source: String
+    source_size: usize,
+    source: String,
 }
 
 impl Tokenizer {
@@ -84,6 +110,7 @@ impl Tokenizer {
             current_idx: 0,
             line: 1,
             invalid: false,
+            source_size: source.chars().count(),
             source
         }
     }
@@ -93,23 +120,43 @@ impl Tokenizer {
             let start = self.current_idx;
             let next_val: String = self.get_next();
 
-            if next_val == "\n" {
-                self.line += 1;
-                continue;
-            }
+            match next_val.as_str() {
+                " " | "\t" | "\r" => { },
+                "\n" => self.line += 1,
+                _ => {
+                    let lexeme = &self.source.to_string()[start..self.current_idx];
 
-            let lexeme = &self.source.to_string()[start..self.current_idx];
+                    match TokenType::from_str(next_val.as_str()) {
+                        Ok(token_type) => {
+                            match token_type {
+                                TokenType::Bang => {
+                                    self.add_token(if self.match_next('=') { TokenType::BangEqual } else { TokenType::Bang }, lexeme.to_string(), self.line);
+                                },
 
-            match TokenType::from_str(next_val.as_str()) {
-                Ok(token_type) => {
-                    self.add_token(token_type, lexeme.to_string(), self.line);
-                },
+                                TokenType::Equal => {
+                                    self.add_token(if self.match_next('=') { TokenType::EqualEqual } else { TokenType::Equal }, lexeme.to_string(), self.line);
+                                },
 
-                Err(_) => {
-                    self.invalid = true;
-                    eprintln!("[line {}] Error: Unexpected character: {}", self.line, lexeme);
+                                TokenType::Greater => {
+                                    self.add_token(if self.match_next('=') { TokenType::GreaterEqual } else { TokenType::Greater }, lexeme.to_string(), self.line);
+                                },
+
+                                TokenType::Less => {
+                                    self.add_token(if self.match_next('=') { TokenType::LessEqual } else { TokenType::Less }, lexeme.to_string(), self.line);
+                                }
+
+                                _ => self.add_token(token_type, lexeme.to_string(), self.line)
+                            }
+                        },
+
+                        Err(_) => {
+                            self.invalid = true;
+                            eprintln!("[line {}] Error: Unexpected character: {}", self.line, lexeme);
+                        }
+                    }
                 }
             }
+
         }
 
         self.add_token(TokenType::EOF, "".to_string(), self.line);
@@ -129,4 +176,15 @@ impl Tokenizer {
             .to_string()
     }
 
+    fn match_next(&self, expected: char) -> bool {
+        if self.is_at_end() {
+            return false;
+        }
+
+        self.source.chars().nth(self.current_idx) == Option::from(expected)
+    }
+
+    fn is_at_end(&self) -> bool {
+        self.current_idx >= self.source_size
+    }
 }
