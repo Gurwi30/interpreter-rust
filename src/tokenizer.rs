@@ -145,7 +145,7 @@ impl Tokenizer {
                                 token_type
                             };
 
-                            let lexeme = &self.source.to_string()[start..self.current_idx];
+                            let lexeme = &self.source.to_string()[start..self.current_idx - 1];
                             self.add_token(final_token, lexeme.to_string(), self.line);
                         },
 
