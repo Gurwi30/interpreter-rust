@@ -212,7 +212,7 @@ impl Tokenizer {
 
         self.source.chars()
             .nth(self.current_idx - 1)
-            .unwrap_or('\0')
+            .unwrap()
             .to_string()
     }
 
