@@ -24,6 +24,7 @@ pub enum TokenType {
     LessEqual,
     String,
     Number,
+    Identifier,
     EOF
 }
 
@@ -51,6 +52,7 @@ impl Display for TokenType {
             TokenType::LessEqual => write!(f, "LESS_EQUAL"),
             TokenType::String => write!(f, "STRING"),
             TokenType::Number => write!(f, "NUMBER"),
+            TokenType::Identifier => write!(f, "IDENTIFIER"),
             TokenType::EOF => write!(f, "EOF"),
         }
     }
@@ -60,8 +62,12 @@ impl FromStr for TokenType {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.chars().all(char::is_alphabetic) {
+            return Ok(TokenType::Identifier);
+        }
+
         if s.trim().parse::<f64>().is_ok() {
-            return Ok(TokenType::Number)
+            return Ok(TokenType::Number);
         }
 
         match s {
@@ -188,6 +194,7 @@ impl Tokenizer {
 
                                 TokenType::String => self.string(),
                                 TokenType::Number => self.number(),
+                                TokenType::Identifier => self.identifier(),
 
                                 _ => self.add_token(final_token, lexeme.to_string(), None, self.line)
                             }
@@ -250,13 +257,24 @@ impl Tokenizer {
         }
 
         let value = self.source.as_str()[start..self.current_idx].to_string();
-        
+
         // if !is_float {
         //     self.add_token(TokenType::Number, value.clone(), Some(Literal::Integer(value.parse::<isize>().unwrap())), self.line);
         //     return;
         // }
 
         self.add_token(TokenType::Number, value.clone(), Some(Literal::Float(value.parse::<f64>().unwrap())), self.line);
+    }
+
+    fn identifier(&mut self) {
+        let start = self.current_idx - 1;
+
+        while self.peek().is_alphanumeric() {
+            self.poll();
+        }
+
+        let lexeme = self.source.as_str()[start..self.current_idx].to_string();
+        self.add_token(TokenType::Identifier, lexeme, None, self.line);
     }
 
     fn add_token(&mut self, token_type: TokenType, lexeme: String, literal: Option<Literal>, line: usize) {
@@ -300,5 +318,15 @@ impl Tokenizer {
 }
 
 fn is_digit(c: char) -> bool {
-    return c >= '0' && c <= '9';
+    c >= '0' && c <= '9'
 }
+
+// fn is_alpha(c: char) -> bool {
+//     (c >= 'a' && c <= 'z') ||
+//         (c >= 'A' && c <= 'Z') ||
+//         c == '_'
+// }
+//
+// fn is_alphanumeric(c: char) -> bool {
+//     is_alpha(c) || is_digit(c)
+// }
