@@ -195,7 +195,7 @@ impl Tokenizer {
             println!("[line {}] Error: Unterminated string", self.line);
         }
 
-        //self.poll();
+        self.poll();
 
         let lexeme = self.source.as_str()[start..self.current_idx].to_string();
         let value = self.source.as_str()[start + 1..self.current_idx - 1].to_string();
