@@ -58,7 +58,11 @@ fn main() {
             let mut tokenizer = Tokenizer::new(file_contents);
             let tokens = tokenizer.tokenize();
 
-            Parser::new(tokens.clone()).parse();
+            let expr = Parser::new(tokens.clone()).parse();
+            
+            if let Some(expr) = expr {
+                println!("{}", expr);
+            }
         }
         _ => {
             writeln!(io::stderr(), "Unknown command: {}", command).unwrap();
