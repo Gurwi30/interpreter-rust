@@ -26,7 +26,7 @@ lazy_static! {
     ]);
 }
 
-#[derive(Clone)]
+#[derive(Clone, Eq, PartialEq)]
 pub enum TokenType {
     LeftParen,
     RightParen,
@@ -207,12 +207,6 @@ pub struct Tokenizer {
     pub invalid: bool,
     source_size: usize,
     source: String,
-}
-
-impl PartialEq for TokenType {
-    fn eq(&self, other: &Self) -> bool {
-        self == other
-    }
 }
 
 impl Tokenizer {

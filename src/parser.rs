@@ -26,7 +26,7 @@ pub struct Parser {
 
 impl PartialEq<&TokenType> for &Token {
     fn eq(&self, other: &&TokenType) -> bool {
-        self == other
+        &self.token_type == *other
     }
 }
 
