@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::fmt::{Display, Formatter };
 use std::str::FromStr;
 use lazy_static::lazy_static;
+use crate::lox;
 
 lazy_static! {
     pub static ref KEYWORDS: HashMap<&'static str, TokenType> = HashMap::from([
@@ -190,11 +191,11 @@ pub enum Literal {
 impl Display for Literal {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Literal::String(s) => write!(f, "{}", s),
-            Literal::Integer(n) => write!(f, "{}", n),
-            Literal::Float(n) => write!(f, "{:?}", n),
-            Literal::Boolean(b) => write!(f, "{}", b),
-            Literal::Nil => write!(f, "null"),
+            Literal::String(s) => write!(f, "{s}"),
+            Literal::Integer(n) => write!(f, "{n}"),
+            Literal::Float(n) => write!(f, "{n:?}"),
+            Literal::Boolean(b) => write!(f, "{b}"),
+            Literal::Nil => write!(f, "nil"),
         }
     }
 }
@@ -270,7 +271,7 @@ impl Tokenizer {
 
                         Err(_) => {
                             self.invalid = true;
-                            eprintln!("[line {}] Error: Unexpected character: {}", self.line, self.source.chars().nth(start).unwrap());
+                            lox::report(self.line, format!("Unexpected character: {}", self.source.chars().nth(start).unwrap()));
                         }
                     }
                 }
@@ -294,7 +295,7 @@ impl Tokenizer {
 
         if self.is_at_end() {
             self.invalid = true;
-            eprintln!("[line {}] Error: Unterminated string.", self.line);
+            lox::report(self.line, "Unterminated string.".to_string());
 
             return;
         }

@@ -1,5 +1,7 @@
 mod tokenizer;
 mod parser;
+mod expr;
+mod lox;
 
 use std::env;
 use std::fs;
