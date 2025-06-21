@@ -244,12 +244,12 @@ impl Tokenizer {
                                 _ => token_type,
                             };
 
-                            let lexeme = &self.source.to_string()[start..self.current_idx];
+                            let lexeme = self.get_lexeme(start);
 
                             match final_token {
                                 TokenType::Slash => {
                                     if !self.match_next('/') {
-                                        self.add_token(final_token, lexeme.to_string(), None, self.line);
+                                        self.add_token(final_token, lexeme, None, self.line);
                                         continue;
                                     }
 
@@ -262,7 +262,7 @@ impl Tokenizer {
                                 TokenType::Number => self.number(),
                                 TokenType::Identifier => self.identifier(),
 
-                                _ => self.add_token(final_token, lexeme.to_string(), None, self.line)
+                                _ => self.add_token(final_token, lexeme, None, self.line)
                             }
                         },
 
@@ -299,9 +299,7 @@ impl Tokenizer {
 
         self.poll();
 
-        let lexeme = self.source.get(start..self.current_idx)
-            .unwrap_or("<invalid utf-8 slice>")
-            .to_string();
+        let lexeme = self.get_lexeme(start);
 
         let value = self.source.get(start + 1..self.current_idx - 1)
             .unwrap_or("<invalid utf-8 slice>")
@@ -327,7 +325,7 @@ impl Tokenizer {
             }
         }
 
-        let value = self.source.as_str()[start..self.current_idx].to_string();
+        let value = self.get_lexeme(start);
 
         // if !is_float {
         //     self.add_token(TokenType::Number, value.clone(), Some(Literal::Integer(value.parse::<isize>().unwrap())), self.line);
@@ -344,7 +342,7 @@ impl Tokenizer {
             self.poll();
         }
 
-        let lexeme = self.source.as_str()[start..self.current_idx].to_string();
+        let lexeme = self.get_lexeme(start);
         
         match KEYWORDS.get(lexeme.as_str()) { 
             Some(keyword) => self.add_token(keyword.clone(), lexeme, None, self.line),
@@ -386,6 +384,12 @@ impl Tokenizer {
         true
     }
 
+    fn get_lexeme(&self, start: usize) -> String {
+        self.source.get(start..self.current_idx)
+            .unwrap_or("<invalid utf-8 slice>")
+            .to_string()
+    }
+    
     fn is_at_end(&self) -> bool {
         self.current_idx >= self.source_size
     }
