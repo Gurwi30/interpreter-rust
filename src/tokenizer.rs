@@ -174,7 +174,10 @@ pub struct Token {
 
 impl Display for Token {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let literal = self.literal.as_ref().unwrap_or(&Literal::Nil);
+        let literal = self.literal.as_ref()
+            .map(|l| l.to_string())
+            .unwrap_or("null".to_string());
+        
         write!(f, "{} {} {}", self.token_type, self.lexeme, literal)
     }
 }
