@@ -58,7 +58,7 @@ impl Parser {
         self.expression_statement()
     }
 
-    fn expression(&mut self) -> Result<Expr, ParseError> {
+    pub fn expression(&mut self) -> Result<Expr, ParseError> {
         self.equality()
     }
 

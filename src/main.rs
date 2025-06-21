@@ -70,15 +70,13 @@ fn main() {
                 exit(65);
             }
 
-            let expr = Parser::new(tokens.clone()).parse();
+            let expr = Parser::new(tokens.clone()).expression();
             
             match expr {
-                Ok(stmts) => {
-                    for expr in stmts {
-                        match interpreter::eval(&expr) { 
-                            Ok(val) => println!("{}", val),
-                            Err(err) => writeln!(io::stderr(), "{}", err).unwrap()
-                        }
+                Ok(ex) => {
+                    match interpreter::eval(&ex) {
+                        Ok(val) => println!("{}", val),
+                        Err(err) => writeln!(io::stderr(), "{}", err).unwrap()
                     }
                 }
                 Err(err) => { 
