@@ -1,6 +1,27 @@
+use std::fmt;
 use std::fmt::{Display, Formatter};
 use crate::expr::Expr;
-use crate::tokenizer::{TokenType, Literal};
+use crate::tokenizer::{TokenType, Literal, Token};
+
+#[derive(Debug)]
+pub struct RuntimeError<'a> {
+    pub token: &'a Token,
+    pub message: String,
+}
+
+impl Display for RuntimeError<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "[line {}] Error: {}", self.token.line, self.message)
+    }
+}
+
+impl std::error::Error for RuntimeError<'_> { }
+
+impl RuntimeError<'_> {
+    pub fn new(token: &Token, message: String) -> RuntimeError {
+        RuntimeError { token, message }
+    }
+}
 
 #[derive(Clone, PartialEq)]
 pub enum Value {
@@ -12,7 +33,7 @@ pub enum Value {
 }
 
 impl Display for Value {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Value::String(s) => write!(f, "{s}"),
             Value::Integer(n) => write!(f, "{n}"),
@@ -24,9 +45,9 @@ impl Display for Value {
 }
 
 impl Value {
-    
+
     fn from_literal(literal: &Literal) -> Value {
-        match literal { 
+        match literal {
             Literal::Integer(i) => Value::Integer(*i),
             Literal::Float(f) => Value::Float(*f),
             Literal::Boolean(b) => Value::Boolean(*b),
@@ -34,14 +55,14 @@ impl Value {
             Literal::Nil => Value::Nil
         }
     }
-    
+
 }
 
-pub fn eval(expr: &Expr) -> Value {
+pub fn eval(expr: &Expr) -> Result<Value, RuntimeError> {
 
     match expr {
         Expr::Literal { literal } => {
-            Value::from_literal(literal)
+            Ok(Value::from_literal(literal))
         },
 
         Expr::Unary { operator, right } => {
@@ -50,70 +71,70 @@ pub fn eval(expr: &Expr) -> Value {
             match operator.token_type {
                 TokenType::Minus => {
                     match right {
-                        Value::Integer(i) => Value::Integer(-i),
-                        Value::Float(f) => Value::Float(-f),
-                        _ => panic!("Invalid operation")
+                        Ok(Value::Integer(i)) => Ok(Value::Integer(-i)),
+                        Ok(Value::Float(f)) => Ok(Value::Float(-f)),
+                        _ => Err(RuntimeError::new(operator, "Operand must be a number".to_string()))
                     }
                 },
 
                 TokenType::Bang => {
-                    Value::Boolean(!is_truthy(right))
+                    Ok(Value::Boolean(!is_truthy(right?)))
                 }
 
-                _ => panic!("unary operator not supported")
+                _ => Err(RuntimeError::new(operator, "Unary operator not supported".to_string()))
             }
         },
 
         Expr::Binary { left, operator, right } => {
-            let left = eval(left);
-            let right = eval(right);
+            let left = eval(left)?;
+            let right = eval(right)?;
 
             match (&left, &right, &operator.token_type) {
                 (Value::Float(l), Value::Float(r), TokenType::Plus) => {
-                    Value::Float(l + r)
+                    Ok(Value::Float(l + r))
                 },
 
                 (Value::Float(l), Value::Float(r), TokenType::Minus) => {
-                    Value::Float(l - r)
+                    Ok(Value::Float(l - r))
                 },
 
                 (Value::Float(l), Value::Float(r), TokenType::Star) => {
-                    Value::Float(l * r)
+                    Ok(Value::Float(l * r))
                 },
 
                 (Value::Float(l), Value::Float(r), TokenType::Slash) => {
-                    Value::Float(l / r)
+                    Ok(Value::Float(l / r))
                 },
 
                 (Value::String(l), Value::String(r), TokenType::Plus) => {
-                    Value::String(format!("{}{}", l, r))
+                    Ok(Value::String(format!("{}{}", l, r)))
                 },
 
                 (Value::Float(l), Value::Float(r), TokenType::Greater) => {
-                    Value::Boolean(l > r)
+                    Ok(Value::Boolean(l > r))
                 },
 
                 (Value::Float(l), Value::Float(r), TokenType::GreaterEqual) => {
-                    Value::Boolean(l >= r)
+                    Ok(Value::Boolean(l >= r))
                 },
 
                 (Value::Float(l), Value::Float(r), TokenType::Less) => {
-                    Value::Boolean(l < r)
+                    Ok(Value::Boolean(l < r))
                 },
 
                 (Value::Float(l), Value::Float(r), TokenType::LessEqual) => {
-                    Value::Boolean(l <= r)
+                    Ok(Value::Boolean(l <= r))
                 },
 
                 (_, _, TokenType::EqualEqual) => {
-                    Value::Boolean(is_equal(&left, &right))
+                    Ok(Value::Boolean(is_equal(&left, &right)))
                 },
                 
                 (_, _, TokenType::BangEqual) => {
-                    Value::Boolean(!is_equal(&left, &right))
+                    Ok(Value::Boolean(!is_equal(&left, &right)))
                 }
 
-                _ => panic!("binary operator not supported for the given operand types"),
+                _ => Err(RuntimeError::new(operator, "Binary operator not supported".to_string())),
             }
         },
 
@@ -139,3 +160,4 @@ fn is_equal(a: &Value, b: &Value) -> bool {
         _ => a == b,
     }
 }
+

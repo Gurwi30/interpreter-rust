@@ -69,7 +69,13 @@ fn main() {
             let expr = Parser::new(tokens.clone()).parse();
             
             match expr {
-                Some(expr) => println!("{}", interpreter::eval(&expr)),
+                Some(expr) => match interpreter::eval(&expr) { 
+                    Ok(val) => println!("{}", val),
+                    Err(err) => {
+                        eprintln!("{}", err);
+                        exit(70)
+                    }
+                },
                 None => exit(65)
             };
         }

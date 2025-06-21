@@ -26,7 +26,7 @@ lazy_static! {
     ]);
 }
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum TokenType {
     LeftParen,
     RightParen,
@@ -164,7 +164,7 @@ impl FromStr for TokenType {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Token {
     pub token_type: TokenType,
     pub lexeme: String,
@@ -182,7 +182,7 @@ impl Display for Token {
     }
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Literal {
     String(String),
     Integer(isize),
