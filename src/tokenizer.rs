@@ -207,7 +207,7 @@ pub struct Tokenizer {
     tokens: Vec<Token>,
     current_idx: usize,
     line: usize,
-    pub invalid: bool,
+    pub had_error: bool,
     source_size: usize,
     source: String,
 }
@@ -219,7 +219,7 @@ impl Tokenizer {
             tokens: Vec::new(),
             current_idx: 0,
             line: 1,
-            invalid: false,
+            had_error: false,
             source_size: source.chars().count(),
             source
         }
@@ -267,7 +267,7 @@ impl Tokenizer {
                         },
 
                         Err(_) => {
-                            self.invalid = true;
+                            self.had_error = true;
                             lox::report(self.line, format!("Unexpected character: {}", self.source.chars().nth(start).unwrap()));
                         }
                     }
@@ -291,7 +291,7 @@ impl Tokenizer {
         }
 
         if self.is_at_end() {
-            self.invalid = true;
+            self.had_error = true;
             lox::report(self.line, "Unterminated string.".to_string());
 
             return;

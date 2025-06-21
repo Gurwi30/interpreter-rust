@@ -21,7 +21,7 @@ impl std::error::Error for ParseError { }
 
 pub struct Parser {
     tokens: Vec<Token>,
-    cur_idx: usize
+    cur_idx: usize,
 }
 
 impl PartialEq<&TokenType> for &Token {
@@ -35,7 +35,7 @@ impl Parser {
     pub fn new(tokens: Vec<Token>) -> Parser {
         Parser {
             tokens,
-            cur_idx: 0
+            cur_idx: 0,
         }
     }
 

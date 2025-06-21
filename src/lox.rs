@@ -6,7 +6,7 @@ pub fn report(line: usize, message: String) {
 
 pub fn error(token: &Token, message: &str) {
     if token.token_type == TokenType::EOF {
-        report(token.line, format!(" at end, {message}"));
+        report(token.line, format!("{} at end, {message}", token.lexeme));
         return;
     }
 
