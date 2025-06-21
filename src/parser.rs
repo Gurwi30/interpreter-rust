@@ -39,8 +39,23 @@ impl Parser {
         }
     }
 
-    pub fn parse(&mut self) -> Option<Expr> {
-        self.expression().ok()
+    pub fn parse(&mut self) -> Result<Vec<Expr>, ParseError> {
+        let mut statements: Vec<Expr> = Vec::new();
+
+        while !self.is_at_end() {
+            statements.push(self.statement()?)
+        }
+
+        Ok(statements)
+        //self.expression().ok()
+    }
+
+    fn statement(&mut self) -> Result<Expr, ParseError> {
+        if self.match_types(&[TokenType::Print]) {
+            return self.print_statement();
+        }
+
+        self.expression_statement()
     }
 
     fn expression(&mut self) -> Result<Expr, ParseError> {
@@ -135,6 +150,18 @@ impl Parser {
         }
         
         Err(error(self.peek(), "Expect expression."))
+    }
+
+    fn expression_statement(&mut self) -> Result<Expr, ParseError> {
+        let expr = self.expression();
+        self.consume(TokenType::Semicolon, "Expect ';' after expression.")?;
+        expr
+    }
+
+    fn print_statement(&mut self) -> Result<Expr, ParseError> {
+        let expr = self.expression()?;
+        self.consume(TokenType::Semicolon, "Expect ';' after value.")?;
+        Ok(Expr::print(expr))
     }
 
     fn synchronize(&mut self) {

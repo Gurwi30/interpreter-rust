@@ -33,7 +33,7 @@ impl Display for Expr {
             Expr::Unary { operator, right } => write!(f, "({} {})", operator.lexeme, right),
             Expr::Binary { left, operator, right } => write!(f, "({} {} {})", operator.lexeme, left, right),
             Expr::Grouping { expr } => write!(f, "(group {})", expr),
-            Expr::Print { expr } => write!(f, "(print {})", expr),
+            Expr::Print { expr } => write!(f, "print {}", expr),
         }
     }
 }
@@ -54,6 +54,10 @@ impl Expr {
     
     pub fn grouping(expr: Expr) -> Expr {
         Expr::Grouping { expr: Box::new(expr) }
+    }
+
+    pub fn print(expr: Expr) -> Expr {
+        Expr::Print { expr: Box::new(expr) }
     }
     
 }
