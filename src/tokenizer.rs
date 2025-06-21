@@ -280,30 +280,42 @@ impl Tokenizer {
     }
 
     fn string(&mut self) {
-        let start = self.current_idx - 1;
+        let start_byte = self.current_idx - 1;
 
-        while self.peek() != '"' && !self.is_at_end() {
+        while !self.is_at_end() && self.peek() != '"' {
             if self.peek() == '\n' {
                 self.line += 1;
             }
-
             self.poll();
         }
 
         if self.is_at_end() {
             self.had_error = true;
             lox::report(self.line, "Unterminated string.".to_string());
-
             return;
         }
 
         self.poll();
+        
+        let source = self.source.as_str();
 
-        let lexeme = self.get_lexeme(start);
+        let lexeme = match source.get(start_byte..self.current_idx) {
+            Some(s) => s.to_string(),
+            None => {
+                self.had_error = true;
+                lox::report(self.line, "Invalid UTF-8 in string token.".to_string());
+                return;
+            }
+        };
 
-        let value = self.source.get(start + 1..self.current_idx - 1)
-            .unwrap_or("<invalid utf-8 slice>")
-            .to_string();
+        let value = match source.get(start_byte + 1..self.current_idx - 1) {
+            Some(s) => s.to_string(),
+            None => {
+                self.had_error = true;
+                lox::report(self.line, "Invalid UTF-8 in string value.".to_string());
+                return;
+            }
+        };
 
         self.add_token(TokenType::String, lexeme, Some(Literal::String(value)), self.line);
     }
