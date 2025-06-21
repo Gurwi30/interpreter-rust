@@ -71,7 +71,8 @@ pub fn eval(expr: &Expr) -> Literal {
 
                 (_, _, TokenType::EqualEqual) => {
                     Literal::Boolean(is_equal(&left, &right))
-                }
+                },
+                
                 (_, _, TokenType::BangEqual) => {
                     Literal::Boolean(!is_equal(&left, &right))
                 }

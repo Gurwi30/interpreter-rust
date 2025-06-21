@@ -30,17 +30,18 @@ fn main() {
 
     let mut tokenizer = Tokenizer::new(file_contents);
     
-    let tokens = tokenizer.tokenize();
+    let tokens = tokenizer.tokenize().clone();
+
+    if tokenizer.had_error {
+        exit(65);
+    }
+    
     let expr = Parser::new(tokens.clone()).parse();
     
     match command.as_str() {
         "tokenize" => {
             for token in tokens {
                 println!("{}", token);
-            }
-
-            if tokenizer.had_error {
-                exit(65);
             }
         }
 
