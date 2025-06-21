@@ -182,7 +182,7 @@ impl Display for Token {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub enum Literal {
     String(String),
     Integer(isize),

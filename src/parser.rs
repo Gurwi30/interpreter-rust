@@ -50,7 +50,7 @@ impl Parser {
     fn equality(&mut self) -> Result<Expr, ParseError> {
         let mut expr: Expr = self.comparison()?;
 
-        while self.match_types(vec![TokenType::BangEqual, TokenType::EqualEqual]) {
+        while self.match_types(&[TokenType::BangEqual, TokenType::EqualEqual]) {
             let operator: Token = self.previous().clone();
             let right: Expr = self.comparison()?;
 
@@ -63,7 +63,7 @@ impl Parser {
     fn comparison(&mut self) -> Result<Expr, ParseError> {
         let mut expr: Expr = self.term()?;
 
-        while self.match_types(vec![TokenType::Greater, TokenType::GreaterEqual, TokenType::Less, TokenType::LessEqual]) {
+        while self.match_types(&[TokenType::Greater, TokenType::GreaterEqual, TokenType::Less, TokenType::LessEqual]) {
             let operator: Token = self.previous().clone();
             let right: Expr = self.term()?;
 
@@ -76,7 +76,7 @@ impl Parser {
     fn term(&mut self) -> Result<Expr, ParseError> {
         let mut expr: Expr = self.factor()?;
 
-        while self.match_types(vec![TokenType::Minus, TokenType::Plus]) {
+        while self.match_types(&[TokenType::Minus, TokenType::Plus]) {
             let operator = self.previous().clone();
             let right = self.factor()?;
 
@@ -89,7 +89,7 @@ impl Parser {
     fn factor(&mut self) -> Result<Expr, ParseError> {
         let mut expr: Expr = self.unary()?;
 
-        while self.match_types(vec![TokenType::Slash, TokenType::Star]) {
+        while self.match_types(&[TokenType::Slash, TokenType::Star]) {
             let operator: Token = self.previous().clone();
             let right: Expr = self.unary()?;
 
@@ -100,7 +100,7 @@ impl Parser {
     }
 
     fn unary(&mut self) -> Result<Expr, ParseError> {
-        if self.match_types(vec![TokenType::Bang, TokenType::Minus]) {
+        if self.match_types(&[TokenType::Bang, TokenType::Minus]) {
             let operator: Token = self.previous().clone();
             let right: Expr = self.unary()?;
 
@@ -111,23 +111,23 @@ impl Parser {
     }
 
     fn primary(&mut self) -> Result<Expr, ParseError> {
-        if self.match_types(vec![TokenType::False]) {
+        if self.match_types(&[TokenType::False]) {
             return Ok(Expr::literal(Literal::Boolean(false)));
         }
 
-        if self.match_types(vec![TokenType::True]) {
+        if self.match_types(&[TokenType::True]) {
             return Ok(Expr::literal(Literal::Boolean(true)));
         }
 
-        if self.match_types(vec![TokenType::Nil]) {
+        if self.match_types(&[TokenType::Nil]) {
             return Ok(Expr::literal(Literal::Nil));
         }
 
-        if self.match_types(vec![TokenType::Number, TokenType::String]) {
+        if self.match_types(&[TokenType::Number, TokenType::String]) {
             return Ok(Expr::literal(self.previous().clone().literal.unwrap()))
         }
 
-        if self.match_types(vec![TokenType::LeftParen]) {
+        if self.match_types(&[TokenType::LeftParen]) {
             let expr: Expr = self.expression()?;
             let _ = self.consume(TokenType::RightParen, "Expect ')' after expression.");
 
@@ -155,7 +155,7 @@ impl Parser {
         }
     }
 
-    fn match_types(&mut self, token_types: Vec<TokenType>) -> bool {
+    fn match_types(&mut self, token_types: &[TokenType]) -> bool {
         for token_type in token_types {
             if !self.check(&token_type) {
                 continue;
