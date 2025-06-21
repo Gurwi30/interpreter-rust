@@ -27,7 +27,7 @@ impl Display for Expr {
         match self {
             Expr::Literal { literal } => write!(f, "{}", literal),
             Expr::Unary { operator, right } => write!(f, "({} {})", operator.lexeme, right),
-            Expr::Binary { left, operator, right } => write!(f, "({} {} {})", left, operator.lexeme, right),
+            Expr::Binary { left, operator, right } => write!(f, "({} {} {})", operator.lexeme, left, right),
             Expr::Grouping { expr } => write!(f, "(group {})", expr)
         }
     }
