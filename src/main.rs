@@ -14,33 +14,33 @@ use crate::tokenizer::Tokenizer;
 fn main() {
     // DEBUG START
     
-    let file_contents = fs::read_to_string("test.lox").unwrap_or_else(|_| {
-        writeln!(io::stderr(), "Failed to read file {}", "text.lox").unwrap();
-        String::new()
-    });
-
-    let mut tokenizer = Tokenizer::new(file_contents.clone());
-    let tokens = tokenizer.tokenize().clone();
-
-    if tokenizer.had_error {
-        exit(65);
-    }
-
-    let expr = Parser::new(tokens.clone()).parse();
-
-    match expr {
-        Ok(expr) => {
-            if let Err(err) = interpreter::run(&expr) {
-                eprintln!("{err}");
-                exit(70)
-            }
-        },
-
-        Err(err) => {
-            eprintln!("{err}");
-            exit(65)
-        }
-    }
+    // let file_contents = fs::read_to_string("test.lox").unwrap_or_else(|_| {
+    //     writeln!(io::stderr(), "Failed to read file {}", "text.lox").unwrap();
+    //     String::new()
+    // });
+    // 
+    // let mut tokenizer = Tokenizer::new(file_contents.clone());
+    // let tokens = tokenizer.tokenize().clone();
+    // 
+    // if tokenizer.had_error {
+    //     exit(65);
+    // }
+    // 
+    // let expr = Parser::new(tokens.clone()).parse();
+    // 
+    // match expr {
+    //     Ok(expr) => {
+    //         if let Err(err) = interpreter::run(&expr) {
+    //             eprintln!("{err}");
+    //             exit(70)
+    //         }
+    //     },
+    // 
+    //     Err(err) => {
+    //         eprintln!("{err}");
+    //         exit(65)
+    //     }
+    // }
 
     // DEBUG END
     
