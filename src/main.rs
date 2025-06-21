@@ -76,7 +76,10 @@ fn main() {
                 Ok(ex) => {
                     match interpreter::eval(&ex) {
                         Ok(val) => println!("{}", val),
-                        Err(err) => writeln!(io::stderr(), "{}", err).unwrap()
+                        Err(err) => {
+                            writeln!(io::stderr(), "{}", err).unwrap();
+                            exit(70)
+                        }
                     }
                 }
                 Err(err) => { 
