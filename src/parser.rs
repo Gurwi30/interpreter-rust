@@ -41,33 +41,6 @@ impl Parser {
 
     pub fn parse(&mut self) -> Option<Expr> {
         self.expression().ok()
-        // while self.cur_idx < self.tokens.len() {
-        //     let token = self.advance();
-        //
-        //     match token.token_type {
-        //         TokenType::True => println!("true"),
-        //         TokenType::False => println!("false"),
-        //         TokenType::Nil => println!("nil"),
-        //
-        //         TokenType::String => if let Some(Literal::String(s)) = &token.literal {
-        //             println!("{}", s);
-        //         },
-        //
-        //         TokenType::Number => {
-        //             match &token.literal {
-        //                 Some(literal) => match literal {
-        //                     Literal::Integer(integer) => println!("{}", integer),
-        //                     Literal::Float(float) => println!("{:?}", float),
-        //                     _ => {}
-        //                 }
-        //
-        //                 None => {}
-        //             }
-        //         },
-        //
-        //         _ => {}
-        //     }
-        // }
     }
 
     fn expression(&mut self) -> Result<Expr, ParseError> {
