@@ -296,7 +296,7 @@ impl Tokenizer {
         }
 
         self.poll();
-        
+
         let source = self.source.as_str();
 
         let lexeme = match source.get(start_byte..self.current_idx) {
@@ -366,17 +366,20 @@ impl Tokenizer {
         self.tokens.push(Token { token_type, lexeme, literal, line });
     }
 
-    fn poll(&mut self) -> String {
-        self.current_idx += 1;
+    fn poll(&mut self) -> char {
+        let rest = &self.source[self.current_idx..];
+        let mut chars = rest.char_indices();
 
-        self.source.chars()
-            .nth(self.current_idx - 1)
-            .unwrap()
-            .to_string()
+        if let Some((_, ch)) = chars.next() {
+            self.current_idx += ch.len_utf8();
+            ch
+        } else {
+            '\0'
+        }
     }
 
     fn peek(&self) -> char {
-        self.source.chars().nth(self.current_idx).unwrap_or('\n')
+        self.source[self.current_idx..].chars().next().unwrap_or('\0')
     }
 
     fn peek_next(&self) -> char {
@@ -401,7 +404,7 @@ impl Tokenizer {
             .unwrap_or("<invalid utf-8 slice>")
             .to_string()
     }
-    
+
     fn is_at_end(&self) -> bool {
         self.current_idx >= self.source_size
     }
