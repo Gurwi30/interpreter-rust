@@ -27,25 +27,31 @@ fn main() {
         writeln!(io::stderr(), "Failed to read file {}", filename).unwrap();
         String::new()
     });
-
-    let mut tokenizer = Tokenizer::new(file_contents);
-    
-    let tokens = tokenizer.tokenize().clone();
-
-    if tokenizer.had_error {
-        exit(65);
-    }
-    
-    let expr = Parser::new(tokens.clone()).parse();
     
     match command.as_str() {
         "tokenize" => {
+            let mut tokenizer = Tokenizer::new(file_contents);
+            let tokens = tokenizer.tokenize().clone();
+
+            if tokenizer.had_error {
+                exit(65);
+            }
+            
             for token in tokens {
                 println!("{}", token);
             }
         }
 
         "parse" => {
+            let mut tokenizer = Tokenizer::new(file_contents);
+            let tokens = tokenizer.tokenize().clone();
+
+            if tokenizer.had_error {
+                exit(65);
+            }
+
+            let expr = Parser::new(tokens.clone()).parse();
+            
             match expr {
                 Some(expr) => println!("{}", expr),
                 None => exit(65)
@@ -53,6 +59,15 @@ fn main() {
         },
         
         "evaluate" => {
+            let mut tokenizer = Tokenizer::new(file_contents);
+            let tokens = tokenizer.tokenize().clone();
+
+            if tokenizer.had_error {
+                exit(65);
+            }
+
+            let expr = Parser::new(tokens.clone()).parse();
+            
             match expr {
                 Some(expr) => println!("{}", interpreter::eval(&expr)),
                 None => exit(65)
