@@ -50,13 +50,11 @@ fn main() {
                 exit(65);
             }
 
-            let expr = Parser::new(tokens.clone()).parse();
+            let expr = Parser::new(tokens.clone()).expression();
             
             match expr {
-                Ok(expr) => {
-                    for ex in expr {
-                        println!("{}", ex);
-                    }
+                Ok(ex) => {
+                    println!("{}", ex);
                 },
                 Err(e) => exit(65)
             }
