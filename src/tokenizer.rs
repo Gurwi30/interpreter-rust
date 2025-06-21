@@ -299,8 +299,13 @@ impl Tokenizer {
 
         self.poll();
 
-        let lexeme = self.source.as_str()[start..self.current_idx].to_string();
-        let value = self.source.as_str()[start + 1..self.current_idx - 1].to_string();
+        let lexeme = self.source.get(start..self.current_idx)
+            .unwrap_or("<invalid utf-8 slice>")
+            .to_string();
+
+        let value = self.source.get(start + 1..self.current_idx - 1)
+            .unwrap_or("<invalid utf-8 slice>")
+            .to_string();
 
         self.add_token(TokenType::String, lexeme, Some(Literal::String(value)), self.line);
     }

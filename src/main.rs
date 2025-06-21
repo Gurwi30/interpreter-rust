@@ -53,9 +53,7 @@ fn main() {
             let expr = Parser::new(tokens.clone()).expression();
             
             match expr {
-                Ok(ex) => {
-                    println!("{}", ex);
-                },
+                Ok(ex) => println!("{}", ex),
                 Err(e) => exit(65)
             }
         },
