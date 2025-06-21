@@ -83,7 +83,7 @@ fn main() {
                 }
                 Err(err) => { 
                     eprintln!("{err}");
-                    exit(65);
+                    exit(70);
                 }
             };
         },
