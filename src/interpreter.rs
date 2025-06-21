@@ -141,6 +141,12 @@ pub fn eval(expr: &Expr) -> Result<Value, RuntimeError> {
         Expr::Grouping { expr } => {
             eval(expr)
         },
+
+        Expr::Print { expr } => {
+            let value = eval(expr)?;
+            println!("{}", value);
+            Ok(Value::Nil)
+        }
     }
 
 }
