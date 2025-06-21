@@ -78,7 +78,29 @@ fn main() {
                 },
                 None => exit(65)
             };
-        }
+        },
+        
+        "run" => {
+            let mut tokenizer = Tokenizer::new(file_contents);
+            let tokens = tokenizer.tokenize().clone();
+
+            if tokenizer.had_error {
+                exit(65);
+            }
+
+            let expr = Parser::new(tokens.clone()).parse();
+
+            match expr {
+                Some(expr) => {
+                    if let Err(err) = interpreter::run(&expr) {
+                        eprintln!("{}", err);
+                        exit(70)
+                    }
+                },
+
+                None => exit(65)
+            }  
+        },
         
         _ => {
             writeln!(io::stderr(), "Unknown command: {}", command).unwrap();

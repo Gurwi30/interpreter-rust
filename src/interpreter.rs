@@ -58,6 +58,11 @@ impl Value {
 
 }
 
+pub fn run(expr: &Expr) -> Result<(), RuntimeError> {
+    eval(expr)?;
+    Ok(())
+}
+
 pub fn eval(expr: &Expr) -> Result<Value, RuntimeError> {
 
     match expr {
