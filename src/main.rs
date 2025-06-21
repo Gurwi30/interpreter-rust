@@ -53,8 +53,12 @@ fn main() {
             let expr = Parser::new(tokens.clone()).parse();
             
             match expr {
-                Some(expr) => println!("{}", expr),
-                None => exit(65)
+                Ok(expr) => {
+                    for ex in expr {
+                        println!("{}", ex);
+                    }
+                },
+                Err(e) => exit(65)
             }
         },
         
@@ -69,14 +73,18 @@ fn main() {
             let expr = Parser::new(tokens.clone()).parse();
             
             match expr {
-                Some(expr) => match interpreter::eval(&expr) { 
-                    Ok(val) => println!("{}", val),
-                    Err(err) => {
-                        eprintln!("{}", err);
-                        exit(70)
+                Ok(stmts) => {
+                    for expr in stmts {
+                        match interpreter::eval(&expr) { 
+                            Ok(val) => println!("{}", val),
+                            Err(err) => writeln!(io::stderr(), "{}", err).unwrap()
+                        }
                     }
-                },
-                None => exit(65)
+                }
+                Err(err) => { 
+                    eprintln!("{err}");
+                    exit(65);
+                }
             };
         },
         
@@ -91,14 +99,17 @@ fn main() {
             let expr = Parser::new(tokens.clone()).parse();
 
             match expr {
-                Some(expr) => {
+                Ok(expr) => {
                     if let Err(err) = interpreter::run(&expr) {
-                        eprintln!("{}", err);
+                        eprintln!("{err}");
                         exit(70)
                     }
                 },
 
-                None => exit(65)
+                Err(err) => {
+                    eprintln!("{err}");
+                    exit(65)
+                }
             }  
         },
         

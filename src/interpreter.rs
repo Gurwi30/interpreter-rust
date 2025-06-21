@@ -58,8 +58,11 @@ impl Value {
 
 }
 
-pub fn run(expr: &Expr) -> Result<(), RuntimeError> {
-    eval(expr)?;
+pub fn run(statements: &Vec<Expr>) -> Result<(), RuntimeError> {
+    for expr in statements {
+        eval(&expr)?;
+    }
+    
     Ok(())
 }
 
