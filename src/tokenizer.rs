@@ -366,15 +366,15 @@ impl Tokenizer {
         self.tokens.push(Token { token_type, lexeme, literal, line });
     }
 
-    fn poll(&mut self) -> char {
+    fn poll(&mut self) -> String {
         let rest = &self.source[self.current_idx..];
         let mut chars = rest.char_indices();
 
         if let Some((_, ch)) = chars.next() {
             self.current_idx += ch.len_utf8();
-            ch
+            ch.to_string()
         } else {
-            '\0'
+            '\0'.to_string()
         }
     }
 
