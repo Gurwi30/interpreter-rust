@@ -50,7 +50,7 @@ pub fn eval(expr: &Expr) -> Literal {
                 },
 
                 (Literal::String(l), Literal::String(r), TokenType::Plus) => {
-                    Literal::String(l + &r)
+                    Literal::String(format!("{}{}", l, r))
                 },
 
                 (Literal::Float(l), Literal::Float(r), TokenType::Greater) => {
