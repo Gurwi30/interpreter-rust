@@ -1,7 +1,7 @@
 use crate::tokenizer::{Literal, Token};
 use std::fmt::{Display, Formatter};
 
-pub(crate) enum Expr {
+pub enum Expr {
     Literal {
         literal: Literal,
     },
