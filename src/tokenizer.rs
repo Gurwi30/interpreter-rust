@@ -208,7 +208,7 @@ pub struct Tokenizer {
     current_idx: usize,
     line: usize,
     pub had_error: bool,
-    source_size: usize, 
+    source_size: usize,
     source: String,
 }
 
@@ -264,8 +264,11 @@ impl Tokenizer {
                         }
                         Err(_) => {
                             self.had_error = true;
+
+                            let ch = self.source.get(start - 1..self.current_idx)
+                                .unwrap_or("<invalid utf-8 slice>")
+                                .to_string();
                             
-                            let ch = self.get_lexeme(start);
                             let msg = format!("Unexpected character: '{}'", ch);
                             lox::report(self.line, &msg);
                         }
@@ -300,7 +303,7 @@ impl Tokenizer {
         let value = self.source.get(start..self.current_idx - 1)
             .unwrap_or("<invalid utf-8 slice>")
             .to_string();
-        
+
         let lexeme = self.source.get(start - 1..self.current_idx)
             .unwrap_or("<invalid utf-8 slice>")
             .to_string();
