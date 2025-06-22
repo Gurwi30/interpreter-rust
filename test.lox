@@ -1,5 +1,10 @@
-print "test";
-
-print "a";
-print "😨";
-print "b";
+{
+     var baz = 65;
+     var bar = 65;
+     {
+        var b = 1;
+         print baz + bar;
+     
+     // Missing closing curly brace
+     // Expect compile error
+}

@@ -47,7 +47,7 @@ impl Parser {
             match self.statement() {
                 Ok(stmt) => statements.push(stmt),
                 Err(e) => {
-                    self.synchronize();
+                    //self.synchronize();
                     return Err(e);
                 }
             }
@@ -212,7 +212,7 @@ impl Parser {
         while !self.check(&TokenType::RightBrace) && !self.is_at_end() {
             statements.push(self.statement()?);
         }
-        
+
         self.consume(TokenType::RightBrace, "Expect '}' after block.")?;
         Ok(statements)
     }
