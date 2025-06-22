@@ -264,12 +264,8 @@ impl Tokenizer {
                         }
                         Err(_) => {
                             self.had_error = true;
-
-                            let ch = self.source.get(start..self.current_idx)
-                                .unwrap_or("<invalid utf-8 slice>")
-                                .to_string();
                             
-                            let msg = format!("Unexpected character: '{}'", c);
+                            let msg = format!("Unexpected character: {}", c);
                             lox::report(self.line, &msg);
                         }
                     }
