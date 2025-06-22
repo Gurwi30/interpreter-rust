@@ -1,10 +1,5 @@
-print true != true;
+print "test";
 
-print 84;
-38
-53
-";
-
-print "There should be an empty line above this.";
-print "(" + "" + ")";
-print "non-ascii: 🗻";
+print "a";
+print "😨";
+print "b";

@@ -205,36 +205,37 @@ impl Display for Literal {
 
 pub struct Tokenizer {
     tokens: Vec<Token>,
-    current_idx: usize,
+    current_idx: usize,   // byte index into source
     line: usize,
     pub had_error: bool,
-    source_size: usize,
+    source_size: usize,   // byte length of source string
     source: String,
 }
 
 impl Tokenizer {
-
     pub fn new(source: String) -> Tokenizer {
+        let source_size = source.len();  // byte length here!
         Tokenizer {
             tokens: Vec::new(),
             current_idx: 0,
             line: 1,
             had_error: false,
-            source_size: source.chars().count(),
-            source
+            source_size,
+            source,
         }
     }
 
     pub fn tokenize(&mut self) -> &Vec<Token> {
-        while self.current_idx < self.source.chars().count() {
+        while !self.is_at_end() {
             let start = self.current_idx;
-            let next_val: String = self.poll();
+            let c = self.poll();
 
-            match next_val.as_str() {
+            match c.as_str() {
                 " " | "\t" | "\r" => {},
                 "\n" => self.line += 1,
+                "\"" => self.string(),
                 _ => {
-                    match TokenType::from_str(next_val.as_str()) {
+                    match TokenType::from_str(c.as_str()) {
                         Ok(token_type) => {
                             let final_token = match token_type {
                                 TokenType::Bang if self.match_next('=') => TokenType::BangEqual,
@@ -248,27 +249,23 @@ impl Tokenizer {
 
                             match final_token {
                                 TokenType::Slash => {
-                                    if !self.match_next('/') {
+                                    if self.match_next('/') {
+                                        while self.peek() != '\n' && !self.is_at_end() {
+                                            self.poll();
+                                        }
+                                    } else {
                                         self.add_token(final_token, lexeme, None, self.line);
-                                        continue;
                                     }
-
-                                    while self.peek() != '\n' && !self.is_at_end() {
-                                        self.poll();
-                                    }
-                                },
-
-                                TokenType::String => self.string(),
+                                }
                                 TokenType::Number => self.number(),
                                 TokenType::Identifier => self.identifier(),
-
-                                _ => self.add_token(final_token, lexeme, None, self.line)
+                                _ => self.add_token(final_token, lexeme, None, self.line),
                             }
-                        },
-
+                        }
                         Err(_) => {
                             self.had_error = true;
-                            lox::report(self.line, format!("Unexpected character: {}", self.source.chars().nth(start).unwrap()));
+                            let ch = self.source[self.current_idx..].chars().next().unwrap_or('\0');
+                            lox::report(self.line, &format!(" at '{}'", ch), "Unexpected character.");
                         }
                     }
                 }
@@ -280,29 +277,29 @@ impl Tokenizer {
     }
 
     fn string(&mut self) {
-        let start = self.current_idx - 1;
+        let start = self.current_idx;
+        let start_line = self.line;
 
         while self.peek() != '"' && !self.is_at_end() {
             if self.peek() == '\n' {
                 self.line += 1;
             }
-
             self.poll();
         }
 
         if self.is_at_end() {
             self.had_error = true;
-            lox::report(self.line, "Unterminated string.".to_string());
-
+            lox::report(start_line, "at end", "Unterminated string.");
             return;
         }
 
         self.poll();
 
-        let lexeme = self.get_lexeme(start);
-        println!("{}", lexeme); 
-
-        let value = self.source.get(start + 1..self.current_idx - 1)
+        let value = self.source.get(start..self.current_idx - 1)
+            .unwrap_or("<invalid utf-8 slice>")
+            .to_string();
+        
+        let lexeme = self.source.get(start - 1..self.current_idx)
             .unwrap_or("<invalid utf-8 slice>")
             .to_string();
 
@@ -311,7 +308,7 @@ impl Tokenizer {
 
     fn number(&mut self) {
         let start = self.current_idx - 1;
-        
+
         while is_digit(self.peek()) {
             self.poll();
         }
@@ -324,9 +321,11 @@ impl Tokenizer {
             }
         }
 
-        let value = self.get_lexeme(start);
+        let value = self.source.get(start..self.current_idx)
+            .unwrap_or("<invalid utf-8 slice>")
+            .to_string();
 
-        self.add_token(TokenType::Number, value.clone(), Some(Literal::Float(value.parse::<f64>().unwrap())), self.line);
+        self.add_token(TokenType::Number, value.clone(), Some(Literal::Float(value.parse().unwrap())), self.line);
     }
 
     fn identifier(&mut self) {
@@ -336,11 +335,13 @@ impl Tokenizer {
             self.poll();
         }
 
-        let lexeme = self.get_lexeme(start);
-        
-        match KEYWORDS.get(lexeme.as_str()) { 
+        let lexeme = self.source.get(start..self.current_idx)
+            .unwrap_or("<invalid utf-8 slice>")
+            .to_string();
+
+        match KEYWORDS.get(lexeme.as_str()) {
             Some(keyword) => self.add_token(keyword.clone(), lexeme, None, self.line),
-            None => self.add_token(TokenType::Identifier, lexeme, None, self.line)
+            None => self.add_token(TokenType::Identifier, lexeme, None, self.line),
         }
     }
 
@@ -349,20 +350,22 @@ impl Tokenizer {
     }
 
     fn poll(&mut self) -> String {
-        self.current_idx += 1;
-
-        self.source.chars()
-            .nth(self.current_idx - 1)
-            .unwrap()
-            .to_string()
+        if self.is_at_end() {
+            return "".to_string();
+        }
+        let c = self.peek();
+        self.current_idx += c.len_utf8();
+        c.to_string()
     }
 
     fn peek(&self) -> char {
-        self.source.chars().nth(self.current_idx).unwrap_or('\0')
+        self.source[self.current_idx..].chars().next().unwrap_or('\0')
     }
 
     fn peek_next(&self) -> char {
-        self.source.chars().nth(self.current_idx + 1).unwrap_or('\0')
+        let mut chars = self.source[self.current_idx..].chars();
+        chars.next();
+        chars.next().unwrap_or('\0')
     }
 
     fn match_next(&mut self, expected: char) -> bool {
@@ -370,11 +373,11 @@ impl Tokenizer {
             return false;
         }
 
-        if self.source.chars().nth(self.current_idx) != Option::from(expected) {
+        if self.peek() != expected {
             return false;
         }
 
-        self.current_idx += 1;
+        self.current_idx += expected.len_utf8();
         true
     }
 
@@ -383,11 +386,10 @@ impl Tokenizer {
             .unwrap_or("<invalid utf-8 slice>")
             .to_string()
     }
-    
+
     fn is_at_end(&self) -> bool {
         self.current_idx >= self.source_size
     }
-
 }
 
 fn is_digit(c: char) -> bool {
