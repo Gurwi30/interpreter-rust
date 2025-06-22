@@ -59,7 +59,7 @@ impl Parser {
         self.expression_statement()
     }
 
-    fn expression(&mut self) -> Result<Expr, ParseError> {
+    pub fn expression(&mut self) -> Result<Expr, ParseError> {
         self.equality()
     }
 
@@ -155,14 +155,14 @@ impl Parser {
 
     fn expression_statement(&mut self) -> Result<Statement, ParseError> {
         let expr = self.expression()?;
-        //self.consume(TokenType::Semicolon, "Expect ';' after expression.")?;
+        self.consume(TokenType::Semicolon, "Expect ';' after expression.")?;
 
         Ok(Statement::expression(expr))
     }
 
     fn print_statement(&mut self) -> Result<Statement, ParseError> {
         let expr = self.expression()?;
-        //self.consume(TokenType::Semicolon, "Expect ';' after value.")?;
+        self.consume(TokenType::Semicolon, "Expect ';' after value.")?;
 
         Ok(Statement::print(expr))
     }

@@ -120,26 +120,16 @@ fn parse(file_contents: &String) {
 
 fn eval(file_contents: &String) {
     let tokens = tokenize(file_contents.to_string());
-    let parse_res = Parser::new(tokens).parse();
+    let parse_res = Parser::new(tokens).expression();
 
     match parse_res {
-        Ok(statements) => {
-            for statement in statements {
-                
-                match statement {
-                    Statement::Expression { expr } | Statement::Print { expr } => {
-                        
-                        match interpreter::eval(&expr) { 
-                            Ok(val) => println!("{}", val),
-                            Err(err) => {
-                                eprintln!("{err}");
-                                exit(70);
-                            }
-                        }
-                        
-                    },
+        Ok(expr) => {
+            match interpreter::eval(&expr) {
+                Ok(val) => println!("{}", val),
+                Err(err) => {
+                    eprintln!("{err}");
+                    exit(70);
                 }
-                
             }
         },
 
