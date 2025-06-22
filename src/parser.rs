@@ -57,16 +57,20 @@ impl Parser {
     }
 
     fn statement(&mut self) -> Result<Statement, ParseError> {
-        if self.match_types(&[TokenType::Print]) {
-            return self.print_statement();
-        }
-
         if self.match_types(&[TokenType::Var]) {
             return self.var_declaration();
         }
 
         if self.match_types(&[TokenType::LeftBrace]) {
             return Ok(Statement::block(self.block()?))
+        }
+
+        if self.match_types(&[TokenType::If]) {
+            return self.if_statement();
+        }
+
+        if self.match_types(&[TokenType::Print]) {
+            return self.print_statement();
         }
 
         self.expression_statement()
@@ -217,6 +221,21 @@ impl Parser {
         Ok(statements)
     }
 
+    fn if_statement(&mut self) -> Result<Statement, ParseError> {
+        self.consume(TokenType::LeftParen, "Expect '(' after 'if'.")?;
+        let condition = self.expression()?;
+        self.consume(TokenType::RightParen, "Expect ')' after condition.")?;
+
+        let then_branch = self.statement()?;
+        let mut else_branch: Option<Statement> = None;
+
+        if self.match_types(&[TokenType::Else]) {
+            else_branch = Some(self.statement()?);
+        }
+
+        Ok(Statement::r#if(condition, then_branch, else_branch))
+    }
+    
     fn print_statement(&mut self) -> Result<Statement, ParseError> {
         let expr = self.expression()?;
         self.consume(TokenType::Semicolon, "Expect ';' after value.")?;

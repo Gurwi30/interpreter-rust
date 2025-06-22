@@ -1,12 +1,11 @@
-use std::cell::RefCell;
 use crate::environment::Environment;
 use crate::expr::Expr;
 use crate::stmt::Statement;
 use crate::tokenizer::{Literal, Token, TokenType};
+use std::cell::RefCell;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::rc::Rc;
-use crate::run;
 
 #[derive(Debug)]
 #[derive(Clone)]
@@ -77,38 +76,52 @@ impl Interpreter {
 
     pub fn run(&mut self, statements: &Vec<Statement>) -> Result<(), RuntimeError> {
         for statement in statements {
-            match statement {
-                Statement::Expression { expr } => {
-                    self.eval(expr)?;
-                },
-
-                Statement::Variable { name, initializer } => {
-                    let value = self.eval(initializer)?;
-                    self.environment.borrow_mut().define(name.lexeme.clone(), value);
-                },
-
-                Statement::Block { statements } => {
-                    let previous = self.environment.clone();
-                    self.environment = Rc::new(RefCell::new(Environment::with_parent(previous.clone())));
-
-                    let result = self.run(statements);
-
-                    self.environment = previous;
-                    
-                    result?;
-                }
-
-                Statement::Print { expr } => {
-                    let val = self.eval(expr)?;
-                    println!("{val}");
-                }
-            };
+            self.run_single(statement)?;
         }
 
         Ok(())
     }
 
-    pub fn eval<'a>(&mut self, expr: &'a Expr) -> Result<Value, RuntimeError> {
+    fn run_single(&mut self, statement: &Statement) -> Result<(), RuntimeError> {
+        match statement {
+            Statement::Expression { expr } => {
+                self.eval(expr)?;
+            },
+
+            Statement::Variable { name, initializer } => {
+                let value = self.eval(initializer)?;
+                self.environment.borrow_mut().define(name.lexeme.clone(), value);
+            },
+
+            Statement::Block { statements } => {
+                let previous = self.environment.clone();
+                self.environment = Rc::new(RefCell::new(Environment::with_parent(previous.clone())));
+
+                let result = self.run(statements);
+
+                self.environment = previous;
+
+                result?;
+            },
+
+            Statement::If { condition, then_branch, else_branch } => {
+                if is_truthy(self.eval(&condition)?) {
+                    self.run_single(&then_branch)?;
+                } else if let Some(else_branch) = else_branch {
+                    self.run_single(&else_branch)?;
+                }
+            }
+
+            Statement::Print { expr } => {
+                let val = self.eval(expr)?;
+                println!("{val}");
+            }
+        };
+
+        Ok(())
+    }
+
+    pub fn eval(&mut self, expr: &Expr) -> Result<Value, RuntimeError> {
 
         match expr {
             Expr::Literal { literal } => {

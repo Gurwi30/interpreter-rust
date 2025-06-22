@@ -17,6 +17,12 @@ pub enum Statement {
         statements: Vec<Statement>
     },
 
+    If {
+        condition: Expr,
+        then_branch: Box<Statement>,
+        else_branch: Option<Box<Statement>>
+    },
+
     Print {
         expr: Expr,
     }
@@ -30,9 +36,13 @@ impl Statement {
     pub fn variable(name: Token, initializer: Expr) -> Statement {
         Statement::Variable { name, initializer }
     }
-    
+
     pub fn block(statements: Vec<Statement>) -> Statement {
         Statement::Block { statements }
+    }
+    
+    pub fn r#if(condition: Expr, then_branch: Statement, else_branch: Option<Statement>) -> Statement {
+        Statement::If { condition, then_branch: Box::new(then_branch), else_branch: else_branch.map(Box::new) }
     }
 
     pub fn print(expr: Expr) -> Statement {
@@ -44,9 +54,22 @@ impl fmt::Display for Statement {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Statement::Expression { expr } => write!(f, "{}", expr),
-            Statement::Variable { name, initializer } => write!(f, "var {name} {initializer}"),
+            Statement::Variable { name, initializer } => write!(f, "var {name} = {initializer}"),
             Statement::Print { expr } => write!(f, "{}", expr),
             
+            Statement::If { condition, then_branch, else_branch } => {
+                write!(f, "if ({}) {}",
+                       condition,
+                       then_branch
+                )?;
+
+                if let Some(else_stmt) = else_branch {
+                    write!(f, " else {}", else_stmt)?;
+                }
+
+                Ok(())
+            }
+
             Statement::Block { statements } => {
                 write!(f, "{{ ")?;
 
