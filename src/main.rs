@@ -135,7 +135,7 @@ fn eval(file_contents: &String) {
 
         Err(err) => {
             eprintln!("{err}");
-            exit(70)
+            exit(65)
         }
     }
 }
