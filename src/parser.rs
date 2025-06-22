@@ -281,6 +281,7 @@ impl Parser {
 
     fn for_statement(&mut self) -> Result<Statement, ParseError> {
         self.consume(TokenType::LeftParen, "Expect '(' after 'for'.")?;
+        
         let initializer = if self.match_types(&[TokenType::Semicolon]) {
             None
         } else if self.match_types(&[TokenType::Var]) {
@@ -288,7 +289,7 @@ impl Parser {
         } else {
             Some(self.expression_statement()?)
         };
-
+        
         let condition = if !self.check(&TokenType::Semicolon) {
             Some(self.expression()?)
         } else {
@@ -296,7 +297,7 @@ impl Parser {
         };
 
         self.consume(TokenType::Semicolon, "Expect ';' after loop condition.")?;
-
+        
         let increment = if !self.check(&TokenType::RightParen) {
             Some(self.expression()?)
         } else {
@@ -305,17 +306,24 @@ impl Parser {
 
         self.consume(TokenType::RightParen, "Expect ')' after for clauses.")?;
 
+        if self.peek().token_type == TokenType::Var {
+            return Err(error(self.peek(), "Expect expression."));
+        }
+        
         let mut body = self.statement()?;
 
-        if let Some(increment) = increment {
-            body = Statement::block(vec![body, Statement::expression(increment)]);
+        if let Some(inc) = increment {
+            body = Statement::block(vec![
+                body,
+                Statement::expression(inc),
+            ]);
         }
-
-        let condition = condition.unwrap_or(Expr::literal(Literal::Boolean(true)));
+        
+        let condition = condition.unwrap_or(Expr::literal(crate::tokenizer::Literal::Boolean(true)));
         body = Statement::r#while(condition, body);
 
-        if let Some(initializer) = initializer {
-            body = Statement::block(vec![initializer, body]);
+        if let Some(init) = initializer {
+            body = Statement::block(vec![init, body]);
         }
 
         Ok(body)
