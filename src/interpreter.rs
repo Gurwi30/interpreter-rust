@@ -1,6 +1,7 @@
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use crate::expr::Expr;
+use crate::stmt::Statement;
 use crate::tokenizer::{TokenType, Literal, Token};
 
 #[derive(Debug)]
@@ -58,11 +59,20 @@ impl Value {
 
 }
 
-pub fn run(statements: &Vec<Expr>) -> Result<(), RuntimeError> {
-    for expr in statements {
-        eval(&expr)?;
+pub fn run(statements: &Vec<Statement>) -> Result<(), RuntimeError> {
+    for statement in statements {
+        match statement {
+            Statement::Expression { expr } => {
+                eval(&expr)?;
+            },
+
+            Statement::Print { expr } => {
+                let val = eval(&expr)?;
+                println!("{val}");
+            }
+        };
     }
-    
+
     Ok(())
 }
 
@@ -149,12 +159,7 @@ pub fn eval(expr: &Expr) -> Result<Value, RuntimeError> {
         Expr::Grouping { expr } => {
             eval(expr)
         },
-
-        Expr::Print { expr } => {
-            let value = eval(expr)?;
-            println!("{}", value);
-            Ok(Value::Nil)
-        }
+        
     }
 
 }

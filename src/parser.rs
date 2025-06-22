@@ -4,6 +4,7 @@ use std::cmp::PartialEq;
 use std::fmt;
 use std::fmt::Formatter;
 use crate::lox;
+use crate::stmt::Statement;
 
 #[derive(Debug)]
 pub struct ParseError {
@@ -39,8 +40,8 @@ impl Parser {
         }
     }
 
-    pub fn parse(&mut self) -> Result<Vec<Expr>, ParseError> {
-        let mut statements: Vec<Expr> = Vec::new();
+    pub fn parse(&mut self) -> Result<Vec<Statement>, ParseError> {
+        let mut statements: Vec<Statement> = Vec::new();
 
         while !self.is_at_end() {
             statements.push(self.statement()?)
@@ -50,7 +51,7 @@ impl Parser {
         //self.expression().ok()
     }
 
-    fn statement(&mut self) -> Result<Expr, ParseError> {
+    fn statement(&mut self) -> Result<Statement, ParseError> {
         if self.match_types(&[TokenType::Print]) {
             return self.print_statement();
         }
@@ -58,7 +59,7 @@ impl Parser {
         self.expression_statement()
     }
 
-    pub fn expression(&mut self) -> Result<Expr, ParseError> {
+    fn expression(&mut self) -> Result<Expr, ParseError> {
         self.equality()
     }
 
@@ -152,16 +153,18 @@ impl Parser {
         Err(error(self.peek(), "Expect expression."))
     }
 
-    fn expression_statement(&mut self) -> Result<Expr, ParseError> {
-        let expr = self.expression();
+    fn expression_statement(&mut self) -> Result<Statement, ParseError> {
+        let expr = self.expression()?;
         self.consume(TokenType::Semicolon, "Expect ';' after expression.")?;
-        expr
+
+        Ok(Statement::expression(expr))
     }
 
-    fn print_statement(&mut self) -> Result<Expr, ParseError> {
+    fn print_statement(&mut self) -> Result<Statement, ParseError> {
         let expr = self.expression()?;
         self.consume(TokenType::Semicolon, "Expect ';' after value.")?;
-        Ok(Expr::print(expr))
+
+        Ok(Statement::print(expr))
     }
 
     fn synchronize(&mut self) {

@@ -3,44 +3,46 @@ mod parser;
 mod expr;
 mod lox;
 mod interpreter;
+mod stmt;
 
 use std::env;
 use std::fs;
 use std::io::{self, Write};
 use std::process::exit;
 use crate::parser::Parser;
-use crate::tokenizer::Tokenizer;
+use crate::stmt::Statement;
+use crate::tokenizer::{Token, Tokenizer};
 
 fn main() {
     // DEBUG START
     
-    // let file_contents = fs::read_to_string("test.lox").unwrap_or_else(|_| {
-    //     writeln!(io::stderr(), "Failed to read file {}", "text.lox").unwrap();
-    //     String::new()
-    // });
-    // 
-    // let mut tokenizer = Tokenizer::new(file_contents.clone());
-    // let tokens = tokenizer.tokenize().clone();
-    // 
-    // if tokenizer.had_error {
-    //     exit(65);
-    // }
-    // 
-    // let expr = Parser::new(tokens.clone()).parse();
-    // 
-    // match expr {
-    //     Ok(expr) => {
-    //         if let Err(err) = interpreter::run(&expr) {
-    //             eprintln!("{err}");
-    //             exit(70)
-    //         }
-    //     },
-    // 
-    //     Err(err) => {
-    //         eprintln!("{err}");
-    //         exit(65)
-    //     }
-    // }
+    let file_contents = fs::read_to_string("test.lox").unwrap_or_else(|_| {
+        writeln!(io::stderr(), "Failed to read file {}", "text.lox").unwrap();
+        String::new()
+    });
+    
+    let mut tokenizer = Tokenizer::new(file_contents.clone());
+    let tokens = tokenizer.tokenize().clone();
+    
+    if tokenizer.had_error {
+        exit(65);
+    }
+    
+    let expr = Parser::new(tokens.clone()).parse();
+    
+    match expr {
+        Ok(expr) => {
+            if let Err(err) = interpreter::run(&expr) {
+                eprintln!("{err}");
+                exit(70)
+            }
+        },
+    
+        Err(err) => {
+            eprintln!("{err}");
+            exit(65)
+        }
+    }
 
     // DEBUG END
     
@@ -69,86 +71,170 @@ fn main() {
             for token in tokens {
                 println!("{}", token);
             }
-
+            
             if tokenizer.had_error {
                 exit(65);
             }
         }
 
         "parse" => {
-            let mut tokenizer = Tokenizer::new(file_contents);
-            let tokens = tokenizer.tokenize().clone();
-
-            if tokenizer.had_error {
-                exit(65);
-            }
-
-            let expr = Parser::new(tokens.clone()).expression();
-            
-            match expr {
-                Ok(ex) => println!("{}", ex),
-                Err(e) => { 
-                    eprintln!("{e}");
-                    exit(65)
-                }
-            }
+            parse(&file_contents);
+            // let mut tokenizer = Tokenizer::new(file_contents);
+            // let tokens = tokenizer.tokenize().clone();
+            // 
+            // if tokenizer.had_error {
+            //     exit(65);
+            // }
+            // 
+            // let expr = Parser::new(tokens.clone()).parse();
+            // 
+            // match expr {
+            //     Ok(ex) => println!("{}", ex),
+            //     Err(e) => {
+            //         eprintln!("{e}");
+            //         exit(65)
+            //     }
+            // }
         },
         
         "evaluate" => {
-            let mut tokenizer = Tokenizer::new(file_contents);
-            let tokens = tokenizer.tokenize().clone();
-
-            if tokenizer.had_error {
-                exit(65);
-            }
-
-            let expr = Parser::new(tokens.clone()).expression();
-            
-            match expr {
-                Ok(ex) => {
-                    match interpreter::eval(&ex) {
-                        Ok(val) => println!("{}", val),
-                        Err(err) => {
-                            writeln!(io::stderr(), "{}", err).unwrap();
-                            exit(70)
-                        }
-                    }
-                }
-                Err(err) => { 
-                    eprintln!("{err}");
-                    exit(70);
-                }
-            };
+            eval(&file_contents);
+            // let mut tokenizer = Tokenizer::new(file_contents);
+            // let tokens = tokenizer.tokenize().clone();
+            // 
+            // if tokenizer.had_error {
+            //     exit(65);
+            // }
+            // 
+            // let expr = Parser::new(tokens.clone()).parse();
+            // 
+            // match expr {
+            //     Ok(ex) => {
+            //         match interpreter::eval(&ex) {
+            //             Ok(val) => println!("{}", val),
+            //             Err(err) => {
+            //                 writeln!(io::stderr(), "{}", err).unwrap();
+            //                 exit(70)
+            //             }
+            //         }
+            //     }
+            //     Err(err) => { 
+            //         eprintln!("{err}");
+            //         exit(70);
+            //     }
+            // };
         },
         
         "run" => {
-            let mut tokenizer = Tokenizer::new(file_contents);
-            let tokens = tokenizer.tokenize().clone();
-
-            if tokenizer.had_error {
-                exit(65);
-            }
-
-            let expr = Parser::new(tokens.clone()).parse();
-
-            match expr {
-                Ok(expr) => {
-                    if let Err(err) = interpreter::run(&expr) {
-                        eprintln!("{err}");
-                        exit(70)
-                    }
-                },
-
-                Err(err) => {
-                    eprintln!("{err}");
-                    exit(65)
-                }
-            }  
+            run(&file_contents);
+            // let mut tokenizer = Tokenizer::new(file_contents);
+            // let tokens = tokenizer.tokenize().clone();
+            // 
+            // if tokenizer.had_error {
+            //     exit(65);
+            // }
+            // 
+            // let expr = Parser::new(tokens.clone()).parse();
+            // 
+            // match expr {
+            //     Ok(expr) => {
+            //         if let Err(err) = interpreter::run(&expr) {
+            //             eprintln!("{err}");
+            //             exit(70)
+            //         }
+            //     },
+            // 
+            //     Err(err) => {
+            //         eprintln!("{err}");
+            //         exit(65)
+            //     }
+            // }  
         },
         
         _ => {
             writeln!(io::stderr(), "Unknown command: {}", command).unwrap();
             return;
+        }
+    }
+
+}
+
+fn tokenize(file_contents: String) -> Vec<Token> {
+    let mut tokenizer = Tokenizer::new(file_contents);
+    let tokens = tokenizer.tokenize().clone();
+
+    if tokenizer.had_error {
+        exit(65);
+    }
+    
+    tokens
+}
+
+fn parse(file_contents: &String) {
+    let tokens = tokenize(file_contents.to_string());
+    let parse_res = Parser::new(tokens).parse();
+    
+    match parse_res { 
+        Ok(statements) => {
+            for statement in statements {
+                println!("{statement}");
+            }
+        },
+        
+        Err(err) => {
+            eprintln!("{err}");
+            exit(70)
+        }
+    }
+}
+
+fn eval(file_contents: &String) {
+    let tokens = tokenize(file_contents.to_string());
+    let parse_res = Parser::new(tokens).parse();
+
+    match parse_res {
+        Ok(statements) => {
+            for statement in statements {
+                
+                match statement {
+                    Statement::Expression { expr } | Statement::Print { expr } => {
+                        
+                        match interpreter::eval(&expr) { 
+                            Ok(val) => println!("{}", val),
+                            Err(err) => {
+                                eprintln!("{err}");
+                                exit(70);
+                            }
+                        }
+                        
+                    },
+                }
+                
+            }
+        },
+
+        Err(err) => {
+            eprintln!("{err}");
+            exit(70)
+        }
+    }
+}
+
+fn run(file_contents: &String) {
+    let tokens = tokenize(file_contents.to_string());
+    let parse_res = Parser::new(tokens).parse();
+
+    match parse_res {
+        Ok(statements) => {
+            if let Err(err) = interpreter::run(&statements) {
+                eprintln!("{err}");
+                exit(70);
+            }
+        },
+
+        Err(err) => {
+            eprintln!("{err}");
+            exit(70)
         }
     }
 }

@@ -280,56 +280,42 @@ impl Tokenizer {
     }
 
     fn string(&mut self) {
-        let start_byte = self.current_idx - 1;
+        let start = self.current_idx - 1;
 
-        while !self.is_at_end() && self.peek() != '"' {
+        while self.peek() != '"' && !self.is_at_end() {
             if self.peek() == '\n' {
                 self.line += 1;
             }
+
             self.poll();
         }
 
         if self.is_at_end() {
             self.had_error = true;
             lox::report(self.line, "Unterminated string.".to_string());
+
             return;
         }
 
         self.poll();
 
-        let source = self.source.as_str();
+        let lexeme = self.get_lexeme(start);
 
-        let lexeme = match source.get(start_byte..self.current_idx) {
-            Some(s) => s.to_string(),
-            None => {
-                self.had_error = true;
-                lox::report(self.line, "Invalid UTF-8 in string token.".to_string());
-                return;
-            }
-        };
-
-        let value = match source.get(start_byte + 1..self.current_idx - 1) {
-            Some(s) => s.to_string(),
-            None => {
-                self.had_error = true;
-                lox::report(self.line, "Invalid UTF-8 in string value.".to_string());
-                return;
-            }
-        };
+        let value = self.source.get(start + 1..self.current_idx - 1)
+            .unwrap_or("<invalid utf-8 slice>")
+            .to_string();
 
         self.add_token(TokenType::String, lexeme, Some(Literal::String(value)), self.line);
     }
 
     fn number(&mut self) {
         let start = self.current_idx - 1;
-        //let mut is_float = false;
-
+        
         while is_digit(self.peek()) {
             self.poll();
         }
 
         if self.peek() == '.' && is_digit(self.peek_next()) {
-            //is_float = true;
             self.poll();
 
             while is_digit(self.peek()) {
@@ -338,11 +324,6 @@ impl Tokenizer {
         }
 
         let value = self.get_lexeme(start);
-
-        // if !is_float {
-        //     self.add_token(TokenType::Number, value.clone(), Some(Literal::Integer(value.parse::<isize>().unwrap())), self.line);
-        //     return;
-        // }
 
         self.add_token(TokenType::Number, value.clone(), Some(Literal::Float(value.parse::<f64>().unwrap())), self.line);
     }
@@ -367,19 +348,16 @@ impl Tokenizer {
     }
 
     fn poll(&mut self) -> String {
-        let rest = &self.source[self.current_idx..];
-        let mut chars = rest.char_indices();
+        self.current_idx += 1;
 
-        if let Some((_, ch)) = chars.next() {
-            self.current_idx += ch.len_utf8();
-            ch.to_string()
-        } else {
-            '\0'.to_string()
-        }
+        self.source.chars()
+            .nth(self.current_idx - 1)
+            .unwrap()
+            .to_string()
     }
 
     fn peek(&self) -> char {
-        self.source[self.current_idx..].chars().next().unwrap_or('\0')
+        self.source.chars().nth(self.current_idx).unwrap_or('\n')
     }
 
     fn peek_next(&self) -> char {
@@ -404,7 +382,7 @@ impl Tokenizer {
             .unwrap_or("<invalid utf-8 slice>")
             .to_string()
     }
-
+    
     fn is_at_end(&self) -> bool {
         self.current_idx >= self.source_size
     }
