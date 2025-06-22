@@ -1,4 +1,3 @@
-use std::fmt::format;
 use crate::tokenizer::{Token, TokenType};
 
 pub fn report(line: usize, message: &str) {
