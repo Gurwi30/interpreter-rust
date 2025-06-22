@@ -357,7 +357,7 @@ impl Tokenizer {
     }
 
     fn peek(&self) -> char {
-        self.source.chars().nth(self.current_idx).unwrap_or('\n')
+        self.source.chars().nth(self.current_idx).unwrap_or('\0')
     }
 
     fn peek_next(&self) -> char {
