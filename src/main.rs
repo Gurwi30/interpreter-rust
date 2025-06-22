@@ -102,15 +102,19 @@ fn tokenize(file_contents: String) -> Vec<Token> {
 
 fn parse(file_contents: &String) {
     let tokens = tokenize(file_contents.to_string());
-    let parse_res = Parser::new(tokens).parse();
-    
-    match parse_res { 
-        Ok(statements) => {
-            for statement in statements {
-                println!("{statement}");
+    let parse_res = Parser::new(tokens).expression();
+
+    match parse_res {
+        Ok(expr) => {
+            match interpreter::eval(&expr) {
+                Ok(val) => println!("{}", val),
+                Err(err) => {
+                    eprintln!("{err}");
+                    exit(70);
+                }
             }
         },
-        
+
         Err(err) => {
             eprintln!("{err}");
             exit(65)
