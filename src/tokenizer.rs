@@ -265,7 +265,7 @@ impl Tokenizer {
                         Err(_) => {
                             self.had_error = true;
                             let ch = self.source[self.current_idx..].chars().next().unwrap_or('\0');
-                            lox::report(self.line, &format!(" at '{}'", ch), "Unexpected character.");
+                            lox::report(self.line, &format!("Unexpected character: '{}'", ch), "");
                         }
                     }
                 }
