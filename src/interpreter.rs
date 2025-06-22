@@ -105,7 +105,7 @@ impl Interpreter {
             },
 
             Statement::If { condition, then_branch, else_branch } => {
-                if is_truthy(self.eval(&condition)?) {
+                if is_truthy(&self.eval(&condition)?) {
                     self.run_single(&then_branch)?;
                 } else if let Some(else_branch) = else_branch {
                     self.run_single(&else_branch)?;
@@ -141,7 +141,7 @@ impl Interpreter {
                     },
 
                     TokenType::Bang => {
-                        Ok(Value::Boolean(!is_truthy(right?)))
+                        Ok(Value::Boolean(!is_truthy(&right?)))
                     }
 
                     _ => Err(RuntimeError::new(operator.clone(), "Unary operator not supported".to_string()))
@@ -221,8 +221,14 @@ impl Interpreter {
             Expr::Logical { left, operator , right } => {
                 let left = self.eval(left)?;
 
-                if !is_truthy(left.clone()) {
-                    return Ok(left);
+                if operator.token_type == TokenType::Or {
+                    if is_truthy(&left) {
+                        return Ok(left);
+                    }
+                } else {
+                    if !is_truthy(&left) {
+                        return Ok(left);
+                    }
                 }
 
                 self.eval(right)
@@ -233,9 +239,9 @@ impl Interpreter {
     }
 }
 
-fn is_truthy(value: Value) -> bool {
+fn is_truthy(value: &Value) -> bool {
     match value {
-        Value::Boolean(b) => b,
+        Value::Boolean(b) => b.clone(),
         Value::Nil => false,
         _ => true,
     }
