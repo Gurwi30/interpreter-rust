@@ -23,6 +23,11 @@ pub enum Statement {
         else_branch: Option<Box<Statement>>
     },
 
+    While {
+        condition: Expr,
+        body: Box<Statement>
+    },
+
     Print {
         expr: Expr,
     }
@@ -40,9 +45,13 @@ impl Statement {
     pub fn block(statements: Vec<Statement>) -> Statement {
         Statement::Block { statements }
     }
-    
+
     pub fn r#if(condition: Expr, then_branch: Statement, else_branch: Option<Statement>) -> Statement {
         Statement::If { condition, then_branch: Box::new(then_branch), else_branch: else_branch.map(Box::new) }
+    }
+
+    pub fn r#while(condition: Expr, body: Statement) -> Statement {
+        Statement::While { condition, body: Box::new(body) }
     }
 
     pub fn print(expr: Expr) -> Statement {
@@ -56,7 +65,18 @@ impl fmt::Display for Statement {
             Statement::Expression { expr } => write!(f, "{}", expr),
             Statement::Variable { name, initializer } => write!(f, "var {name} = {initializer}"),
             Statement::Print { expr } => write!(f, "{}", expr),
-            
+            Statement::While { condition, body } => write!(f, "while ({}) {}", condition, body),
+
+            Statement::Block { statements } => {
+                write!(f, "{{ ")?;
+
+                for stmt in statements {
+                    write!(f, "{} ", stmt)?;
+                }
+
+                write!(f, "}}")
+            },
+
             Statement::If { condition, then_branch, else_branch } => {
                 write!(f, "if ({}) {}",
                        condition,
@@ -68,16 +88,6 @@ impl fmt::Display for Statement {
                 }
 
                 Ok(())
-            }
-
-            Statement::Block { statements } => {
-                write!(f, "{{ ")?;
-
-                for stmt in statements {
-                    write!(f, "{} ", stmt)?;
-                }
-
-                write!(f, "}}")
             },
         }
     }

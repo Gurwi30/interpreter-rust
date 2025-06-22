@@ -110,7 +110,13 @@ impl Interpreter {
                 } else if let Some(else_branch) = else_branch {
                     self.run_single(&else_branch)?;
                 }
-            }
+            },
+            
+            Statement::While { condition, body } => {
+                while is_truthy(&self.eval(&condition)?) {
+                    self.run_single(&body)?;
+                }
+            },
 
             Statement::Print { expr } => {
                 let val = self.eval(expr)?;
@@ -232,7 +238,7 @@ impl Interpreter {
                 }
 
                 self.eval(right)
-            }
+            },
 
         }
 

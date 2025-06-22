@@ -21,16 +21,16 @@ fn main() {
     //     writeln!(io::stderr(), "Failed to read file {}", "text.lox").unwrap();
     //     String::new()
     // });
-    // 
+    //
     // let mut tokenizer = Tokenizer::new(file_contents.clone());
     // let tokens = tokenizer.tokenize().clone();
-    // 
+    //
     // if tokenizer.had_error {
     //     exit(65);
     // }
-    // 
+    //
     // let expr = Parser::new(tokens.clone()).parse();
-    // 
+    //
     // match expr {
     //     Ok(expr) => {
     //         if let Err(err) = Interpreter::new().run(&expr) {
@@ -38,7 +38,7 @@ fn main() {
     //             exit(70)
     //         }
     //     },
-    // 
+    //
     //     Err(err) => {
     //         eprintln!("{err}");
     //         exit(65)
@@ -68,11 +68,11 @@ fn main() {
         "tokenize" => {
             let mut tokenizer = Tokenizer::new(file_contents);
             let tokens = tokenizer.tokenize().clone();
-            
+
             for token in tokens {
                 println!("{}", token);
             }
-            
+
             if tokenizer.had_error {
                 exit(65);
             }
@@ -97,7 +97,7 @@ fn tokenize(file_contents: String) -> Vec<Token> {
     if tokenizer.had_error {
         exit(65);
     }
-    
+
     tokens
 }
 

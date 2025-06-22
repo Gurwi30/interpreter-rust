@@ -69,6 +69,14 @@ impl Parser {
             return self.if_statement();
         }
 
+        if self.match_types(&[TokenType::While]) {
+            return self.while_statement();
+        }
+
+        if self.match_types(&[TokenType::For]) {
+            return self.for_statement();
+        }
+
         if self.match_types(&[TokenType::Print]) {
             return self.print_statement();
         }
@@ -260,6 +268,57 @@ impl Parser {
         }
 
         Ok(Statement::r#if(condition, then_branch, else_branch))
+    }
+
+    fn while_statement(&mut self) -> Result<Statement, ParseError> {
+        self.consume(TokenType::LeftParen, "Expect '(' after 'while'.")?;
+        let condition = self.expression()?;
+        self.consume(TokenType::RightParen, "Expect ')' after condition.")?;
+
+        let body = self.statement()?;
+        Ok(Statement::r#while(condition, body))
+    }
+
+    fn for_statement(&mut self) -> Result<Statement, ParseError> {
+        self.consume(TokenType::LeftParen, "Expect '(' after 'for'.")?;
+        let initializer = if self.match_types(&[TokenType::Semicolon]) {
+            None
+        } else if self.match_types(&[TokenType::Var]) {
+            Some(self.var_declaration()?)
+        } else {
+            Some(self.expression_statement()?)
+        };
+
+        let condition = if !self.check(&TokenType::Semicolon) {
+            Some(self.expression()?)
+        } else {
+            None
+        };
+
+        self.consume(TokenType::Semicolon, "Expect ';' after loop condition.")?;
+
+        let increment = if !self.check(&TokenType::RightParen) {
+            Some(self.expression()?)
+        } else {
+            None
+        };
+
+        self.consume(TokenType::RightParen, "Expect ')' after for clauses.")?;
+
+        let mut body = self.statement()?;
+
+        if let Some(increment) = increment {
+            body = Statement::block(vec![body, Statement::expression(increment)]);
+        }
+
+        let condition = condition.unwrap_or(Expr::literal(Literal::Boolean(true)));
+        body = Statement::r#while(condition, body);
+
+        if let Some(initializer) = initializer {
+            body = Statement::block(vec![initializer, body]);
+        }
+
+        Ok(body)
     }
 
     fn print_statement(&mut self) -> Result<Statement, ParseError> {
