@@ -4,14 +4,15 @@ mod expr;
 mod lox;
 mod interpreter;
 mod stmt;
+mod environment;
 
+use crate::interpreter::Interpreter;
+use crate::parser::Parser;
+use crate::tokenizer::{Token, Tokenizer};
 use std::env;
 use std::fs;
 use std::io::{self, Write};
 use std::process::exit;
-use crate::parser::Parser;
-use crate::stmt::Statement;
-use crate::tokenizer::{Token, Tokenizer};
 
 fn main() {
     // DEBUG START
@@ -119,7 +120,7 @@ fn eval(file_contents: &String) {
 
     match parse_res {
         Ok(expr) => {
-            match interpreter::eval(&expr) {
+            match Interpreter::new().eval(&expr) {
                 Ok(val) => println!("{}", val),
                 Err(err) => {
                     eprintln!("{err}");
@@ -141,7 +142,7 @@ fn run(file_contents: &String) {
 
     match parse_res {
         Ok(statements) => {
-            if let Err(err) = interpreter::run(&statements) {
+            if let Err(err) = Interpreter::new().run(&statements) {
                 eprintln!("{err}");
                 exit(70);
             }

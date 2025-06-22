@@ -1,25 +1,27 @@
-use std::fmt;
-use std::fmt::{Display, Formatter};
+use crate::environment::Environment;
 use crate::expr::Expr;
 use crate::stmt::Statement;
-use crate::tokenizer::{TokenType, Literal, Token};
+use crate::tokenizer::{Literal, Token, TokenType};
+use std::fmt;
+use std::fmt::{Display, Formatter};
 
 #[derive(Debug)]
-pub struct RuntimeError<'a> {
-    pub token: &'a Token,
+#[derive(Clone)]
+pub struct RuntimeError {
+    pub token: Token,
     pub message: String,
 }
 
-impl Display for RuntimeError<'_> {
+impl Display for RuntimeError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "[line {}] Error: {}", self.token.line, self.message)
     }
 }
 
-impl std::error::Error for RuntimeError<'_> { }
+impl std::error::Error for RuntimeError { }
 
-impl RuntimeError<'_> {
-    pub fn new(token: &Token, message: String) -> RuntimeError {
+impl RuntimeError {
+    pub fn new(token: Token, message: String) -> RuntimeError {
         RuntimeError { token, message }
     }
 }
@@ -59,109 +61,133 @@ impl Value {
 
 }
 
-pub fn run(statements: &Vec<Statement>) -> Result<(), RuntimeError> {
-    for statement in statements {
-        match statement {
-            Statement::Expression { expr } => {
-                eval(&expr)?;
-            },
-
-            Statement::Print { expr } => {
-                let val = eval(&expr)?;
-                println!("{val}");
-            }
-        };
-    }
-
-    Ok(())
+pub struct Interpreter {
+    environment: Environment,
 }
 
-pub fn eval(expr: &Expr) -> Result<Value, RuntimeError> {
-
-    match expr {
-        Expr::Literal { literal } => {
-            Ok(Value::from_literal(literal))
-        },
-
-        Expr::Unary { operator, right } => {
-            let right = eval(right);
-            
-            match operator.token_type {
-                TokenType::Minus => {
-                    match right {
-                        Ok(Value::Integer(i)) => Ok(Value::Integer(-i)),
-                        Ok(Value::Float(f)) => Ok(Value::Float(-f)),
-                        _ => Err(RuntimeError::new(operator, "Operand must be a number".to_string()))
-                    }
-                },
-
-                TokenType::Bang => {
-                    Ok(Value::Boolean(!is_truthy(right?)))
-                }
-
-                _ => Err(RuntimeError::new(operator, "Unary operator not supported".to_string()))
-            }
-        },
-
-        Expr::Binary { left, operator, right } => {
-            let left = eval(left)?;
-            let right = eval(right)?;
-
-            match (&left, &right, &operator.token_type) {
-                (Value::Float(l), Value::Float(r), TokenType::Plus) => {
-                    Ok(Value::Float(l + r))
-                },
-
-                (Value::Float(l), Value::Float(r), TokenType::Minus) => {
-                    Ok(Value::Float(l - r))
-                },
-
-                (Value::Float(l), Value::Float(r), TokenType::Star) => {
-                    Ok(Value::Float(l * r))
-                },
-
-                (Value::Float(l), Value::Float(r), TokenType::Slash) => {
-                    Ok(Value::Float(l / r))
-                },
-
-                (Value::String(l), Value::String(r), TokenType::Plus) => {
-                    Ok(Value::String(format!("{}{}", l, r)))
-                },
-
-                (Value::Float(l), Value::Float(r), TokenType::Greater) => {
-                    Ok(Value::Boolean(l > r))
-                },
-
-                (Value::Float(l), Value::Float(r), TokenType::GreaterEqual) => {
-                    Ok(Value::Boolean(l >= r))
-                },
-
-                (Value::Float(l), Value::Float(r), TokenType::Less) => {
-                    Ok(Value::Boolean(l < r))
-                },
-
-                (Value::Float(l), Value::Float(r), TokenType::LessEqual) => {
-                    Ok(Value::Boolean(l <= r))
-                },
-
-                (_, _, TokenType::EqualEqual) => {
-                    Ok(Value::Boolean(is_equal(&left, &right)))
-                },
-                
-                (_, _, TokenType::BangEqual) => {
-                    Ok(Value::Boolean(!is_equal(&left, &right)))
-                }
-
-                _ => Err(RuntimeError::new(operator, "Binary operator not supported".to_string())),
-            }
-        },
-
-        Expr::Grouping { expr } => {
-            eval(expr)
-        },
-        
+impl Interpreter {
+    pub fn new() -> Interpreter {
+        Interpreter {
+            environment: Environment::new(),
+        }
     }
 
+    pub fn run(&mut self, statements: &Vec<Statement>) -> Result<(), RuntimeError> {
+        for statement in statements {
+            match statement {
+                Statement::Expression { expr } => {
+                    self.eval(expr)?;
+                },
+
+                Statement::Variable { name, initializer } => {
+                    let value = self.eval(initializer)?;
+                    self.environment.define(name.lexeme.clone(), value);
+                }
+
+                Statement::Print { expr } => {
+                    let val = self.eval(expr)?;
+                    println!("{val}");
+                }
+            };
+        }
+
+        Ok(())
+    }
+
+    pub fn eval<'a>(&'a self, expr: &'a Expr) -> Result<Value, RuntimeError> {
+
+        match expr {
+            Expr::Literal { literal } => {
+                Ok(Value::from_literal(literal))
+            },
+
+            Expr::Unary { operator, right } => {
+                let right = self.eval(right);
+
+                match operator.token_type {
+                    TokenType::Minus => {
+                        match right {
+                            Ok(Value::Integer(i)) => Ok(Value::Integer(-i)),
+                            Ok(Value::Float(f)) => Ok(Value::Float(-f)),
+                            _ => Err(RuntimeError::new(operator.clone(), "Operand must be a number".to_string()))
+                        }
+                    },
+
+                    TokenType::Bang => {
+                        Ok(Value::Boolean(!is_truthy(right?)))
+                    }
+
+                    _ => Err(RuntimeError::new(operator.clone(), "Unary operator not supported".to_string()))
+                }
+            },
+
+            Expr::Binary { left, operator, right } => {
+                let left = self.eval(left)?;
+                let right = self.eval(right)?;
+
+                match (&left, &right, &operator.token_type) {
+                    (Value::Float(l), Value::Float(r), TokenType::Plus) => {
+                        Ok(Value::Float(l + r))
+                    },
+
+                    (Value::Float(l), Value::Float(r), TokenType::Minus) => {
+                        Ok(Value::Float(l - r))
+                    },
+
+                    (Value::Float(l), Value::Float(r), TokenType::Star) => {
+                        Ok(Value::Float(l * r))
+                    },
+
+                    (Value::Float(l), Value::Float(r), TokenType::Slash) => {
+                        Ok(Value::Float(l / r))
+                    },
+
+                    (Value::String(l), Value::String(r), TokenType::Plus) => {
+                        Ok(Value::String(format!("{}{}", l, r)))
+                    },
+
+                    (Value::Float(l), Value::Float(r), TokenType::Greater) => {
+                        Ok(Value::Boolean(l > r))
+                    },
+
+                    (Value::Float(l), Value::Float(r), TokenType::GreaterEqual) => {
+                        Ok(Value::Boolean(l >= r))
+                    },
+
+                    (Value::Float(l), Value::Float(r), TokenType::Less) => {
+                        Ok(Value::Boolean(l < r))
+                    },
+
+                    (Value::Float(l), Value::Float(r), TokenType::LessEqual) => {
+                        Ok(Value::Boolean(l <= r))
+                    },
+
+                    (_, _, TokenType::EqualEqual) => {
+                        Ok(Value::Boolean(is_equal(&left, &right)))
+                    },
+
+                    (_, _, TokenType::BangEqual) => {
+                        Ok(Value::Boolean(!is_equal(&left, &right)))
+                    }
+
+                    _ => Err(RuntimeError::new(operator.clone(), "Binary operator not supported".to_string())),
+                }
+            },
+
+            Expr::Grouping { expr } => {
+                self.eval(expr)
+            },
+
+            Expr::Variable { name } => {
+                let env = &self.environment;
+                
+                env.get(name)
+                    .map(|val| val.clone())
+            }
+            
+        }
+
+    }
 }
 
 fn is_truthy(value: Value) -> bool {

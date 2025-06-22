@@ -20,7 +20,11 @@ pub enum Expr {
     Grouping {
         expr: Box<Expr>
     },
-    
+
+    Variable {
+        name: Token
+    }
+
 }
 
 impl Display for Expr {
@@ -29,7 +33,8 @@ impl Display for Expr {
             Expr::Literal { literal } => write!(f, "{}", literal),
             Expr::Unary { operator, right } => write!(f, "({} {})", operator.lexeme, right),
             Expr::Binary { left, operator, right } => write!(f, "({} {} {})", operator.lexeme, left, right),
-            Expr::Grouping { expr } => write!(f, "(group {})", expr)
+            Expr::Grouping { expr } => write!(f, "(group {})", expr),
+            Expr::Variable { name } => write!(f, "var {}", name),
         }
     }
 }
@@ -50,6 +55,10 @@ impl Expr {
     
     pub fn grouping(expr: Expr) -> Expr {
         Expr::Grouping { expr: Box::new(expr) }
+    }
+    
+    pub fn variable(name: Token) -> Expr {
+        Expr::Variable { name }
     }
     
 }
