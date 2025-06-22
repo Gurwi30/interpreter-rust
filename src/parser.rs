@@ -46,8 +46,9 @@ impl Parser {
         while !self.is_at_end() {
             match self.statement() {
                 Ok(stmt) => statements.push(stmt),
-                Err(_) => {
+                Err(e) => {
                     self.synchronize();
+                    return Err(e);
                 }
             }
         }
@@ -150,7 +151,7 @@ impl Parser {
         if self.match_types(&[TokenType::Number, TokenType::String]) {
             return Ok(Expr::literal(self.previous().clone().literal.unwrap()))
         }
-        
+
         if self.match_types(&[TokenType::Identifier]) {
             return Ok(Expr::variable(self.previous().clone()))
         }
