@@ -300,6 +300,7 @@ impl Tokenizer {
         self.poll();
 
         let lexeme = self.get_lexeme(start);
+        println!("{}", lexeme); 
 
         let value = self.source.get(start + 1..self.current_idx - 1)
             .unwrap_or("<invalid utf-8 slice>")
