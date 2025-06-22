@@ -3,6 +3,7 @@ use std::fmt;
 use std::fmt::Formatter;
 use crate::tokenizer::Token;
 
+#[derive(Clone)]
 pub enum Statement {
     Expression {
         expr: Expr,
@@ -26,6 +27,12 @@ pub enum Statement {
     While {
         condition: Expr,
         body: Box<Statement>
+    },
+
+    Function {
+        name: Token,
+        params: Vec<Token>,
+        body: Vec<Statement>
     },
 
     Print {
@@ -53,6 +60,10 @@ impl Statement {
     pub fn r#while(condition: Expr, body: Statement) -> Statement {
         Statement::While { condition, body: Box::new(body) }
     }
+    
+    pub fn function(name: Token, params: Vec<Token>, body: Vec<Statement>) -> Statement {
+        Statement::Function { name, params, body }
+    }
 
     pub fn print(expr: Expr) -> Statement {
         Statement::Print { expr }
@@ -66,6 +77,7 @@ impl fmt::Display for Statement {
             Statement::Variable { name, initializer } => write!(f, "var {name} = {initializer}"),
             Statement::Print { expr } => write!(f, "{}", expr),
             Statement::While { condition, body } => write!(f, "while ({}) {}", condition, body),
+            Statement::Function { name, params: _params, body: _body } => write!(f, "function {name}"),
 
             Statement::Block { statements } => {
                 write!(f, "{{ ")?;

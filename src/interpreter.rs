@@ -6,9 +6,11 @@ use std::cell::RefCell;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::rc::Rc;
+use std::time::{SystemTime, UNIX_EPOCH};
+use crate::function;
+use crate::function::{LoxCallable, LoxFunction};
 
 #[derive(Debug)]
-#[derive(Clone)]
 pub struct RuntimeError {
     pub token: Token,
     pub message: String,
@@ -28,22 +30,37 @@ impl RuntimeError {
     }
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone)]
 pub enum Value {
     String(String),
     Integer(isize),
     Float(f64),
     Boolean(bool),
+    Callable(Rc<dyn LoxCallable>),
     Nil
+}
+
+impl PartialEq for Value {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Value::String(a), Value::String(b)) => a == b,
+            (Value::Integer(a), Value::Integer(b)) => a == b,
+            (Value::Float(a), Value::Float(b)) => a == b,
+            (Value::Boolean(a), Value::Boolean(b)) => a == b,
+            (Value::Nil, Value::Nil) => true,
+            _ => false,
+        }
+    }
 }
 
 impl Display for Value {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Value::String(s) => write!(f, "{s}"),
-            Value::Integer(n) => write!(f, "{n}"),
-            Value::Float(n) => write!(f, "{n}"),
+            Value::Integer(i) => write!(f, "{i}"),
+            Value::Float(fl) => write!(f, "{fl}"),
             Value::Boolean(b) => write!(f, "{b}"),
+            Value::Callable(c) => write!(f, "{c}"),
             Value::Nil => write!(f, "nil"),
         }
     }
@@ -63,14 +80,30 @@ impl Value {
 
 }
 
+#[derive(Clone, PartialEq)]
 pub struct Interpreter {
-    environment: Rc<RefCell<Environment>>,
+    pub environment: Rc<RefCell<Environment>>,
+    pub globals: Environment
 }
 
 impl Interpreter {
     pub fn new() -> Interpreter {
+        let mut globals = Environment::new();
+
+        globals.define(
+            "clock".to_string(),
+            Value::Callable(function::create_builtin("clock", 0, |_| {
+                let start = SystemTime::now();
+                let since_epoch = start.duration_since(UNIX_EPOCH)
+                    .expect("Time went backwards");
+
+                Ok(Value::Float(since_epoch.as_secs() as f64))
+            }))
+        );
+
         Interpreter {
             environment: Rc::new(RefCell::new(Environment::new())),
+            globals
         }
     }
 
@@ -96,12 +129,13 @@ impl Interpreter {
             Statement::Block { statements } => {
                 let previous = self.environment.clone();
                 self.environment = Rc::new(RefCell::new(Environment::with_parent(previous.clone())));
-
-                let result = self.run(statements);
-
-                self.environment = previous;
-
-                result?;
+                //
+                // let result = self.run(statements);
+                //
+                // self.environment = previous;
+                //
+                // result?;
+                self.execute_block(statements, self.environment.clone())?;
             },
 
             Statement::If { condition, then_branch, else_branch } => {
@@ -111,7 +145,7 @@ impl Interpreter {
                     self.run_single(&else_branch)?;
                 }
             },
-            
+
             Statement::While { condition, body } => {
                 while is_truthy(&self.eval(&condition)?) {
                     self.run_single(&body)?;
@@ -121,10 +155,44 @@ impl Interpreter {
             Statement::Print { expr } => {
                 let val = self.eval(expr)?;
                 println!("{val}");
+            },
+
+            Statement::Function { name, params, body } => {
+                let func = LoxFunction::new(Statement::function(
+                    name.clone(),
+                    params.clone(),
+                    body.clone()
+                ));
+                
+                self.environment
+                    .borrow_mut()
+                    .define(name.lexeme.clone(), Value::Callable(Rc::new(func)));
             }
         };
 
         Ok(())
+    }
+
+    pub fn execute_block(
+        &mut self,
+        statements: &Vec<Statement>,
+        new_env: Rc<RefCell<Environment>>,
+    ) -> Result<(), RuntimeError> {
+        let previous = Rc::clone(&self.environment);
+
+        self.environment = Rc::clone(&new_env);
+
+        let result = (|| {
+            for statement in statements {
+                self.run_single(&statement)?;
+            }
+
+            Ok(())
+        })();
+
+        self.environment = previous;
+
+        result
     }
 
     pub fn eval(&mut self, expr: &Expr) -> Result<Value, RuntimeError> {
@@ -239,6 +307,26 @@ impl Interpreter {
 
                 self.eval(right)
             },
+
+            Expr::Call { callee, paren, arguments } => {
+                let value = self.eval(callee)?;
+                let mut args: Vec<Value> = Vec::new();
+
+                for arg in arguments {
+                    args.push(self.eval(arg)?);
+                }
+
+                if let Value::Callable(callable) = value {
+                    if args.len() != callable.arity() {
+                        return Err(RuntimeError::new(paren.clone(), format!("Expected {} arguments but got {}.", callable.arity(), args.len())));
+                    }
+
+                    callable.call(self, args)
+                } else {
+                    Err(RuntimeError::new(paren.clone(), "Can only call functions and classes.".to_string()))
+                }
+
+            }
 
         }
 

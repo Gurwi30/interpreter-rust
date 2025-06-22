@@ -1,6 +1,7 @@
 use crate::tokenizer::{Literal, Token};
 use std::fmt::{Display, Formatter};
 
+#[derive(PartialEq, Clone)]
 pub enum Expr {
     Literal {
         literal: Literal,
@@ -34,6 +35,12 @@ pub enum Expr {
         left: Box<Expr>,
         operator: Token,
         right: Box<Expr>
+    },
+
+    Call {
+        callee: Box<Expr>,
+        paren: Token,
+        arguments: Vec<Expr>
     }
 
 }
@@ -48,6 +55,7 @@ impl Display for Expr {
             Expr::Variable { name } => write!(f, "var {}", name),
             Expr::Assign { name, value } => write!(f, "{} = {}", name, value),
             Expr::Logical { left, operator, right } => write!(f, "({} {} {})", operator.lexeme, left, right),
+            Expr::Call { callee, paren, arguments: _arguments } => write!(f, "{}({})", callee, paren),
         }
     }
 }
@@ -77,9 +85,13 @@ impl Expr {
     pub fn assign(name: Token, value: Expr) -> Expr {
         Expr::Assign { name, value: Box::new(value) }
     }
-    
+
     pub fn logical(left: Expr, operator: Token, right: Expr) -> Expr {
         Expr::Logical { left: Box::new(left), operator, right: Box::new(right) }
+    }
+    
+    pub fn call(callee: Expr, paren: Token, arguments: Vec<Expr>) -> Expr {
+        Expr::Call { callee: Box::new(callee), paren, arguments }
     }
     
 }

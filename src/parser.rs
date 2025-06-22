@@ -61,6 +61,10 @@ impl Parser {
             return self.var_declaration();
         }
 
+        if self.match_types(&[TokenType::Fun]) {
+            return self.function("function");
+        }
+
         if self.match_types(&[TokenType::LeftBrace]) {
             return Ok(Statement::block(self.block()?))
         }
@@ -191,7 +195,43 @@ impl Parser {
             return Ok(Expr::unary(operator, right));
         }
 
-        self.primary()
+        self.call()
+    }
+
+    pub fn call(&mut self) -> Result<Expr, ParseError> {
+        let mut expr = self.primary()?;
+
+        loop {
+            if !self.match_types(&[TokenType::LeftParen]) {
+                break;
+            }
+
+            expr = self.finish_call(expr)?;
+        }
+
+        Ok(expr)
+    }
+
+    pub fn finish_call(&mut self, callee: Expr) -> Result<Expr, ParseError> {
+        let mut arguments = Vec::new();
+
+        // FIX: Only enter loop if the next token is not ')'
+        if !self.check(&TokenType::RightParen) {
+            loop {
+                if arguments.len() >= 255 {
+                    error(self.peek(), "Can't have more than 255 arguments.");
+                }
+
+                arguments.push(self.expression()?);
+
+                if !self.match_types(&[TokenType::Comma]) {
+                    break;
+                }
+            }
+        }
+
+        let paren = self.consume(TokenType::RightParen, "Expect ')' after arguments.")?;
+        Ok(Expr::call(callee, paren.clone(), arguments))
     }
 
     fn primary(&mut self) -> Result<Expr, ParseError> {
@@ -244,6 +284,37 @@ impl Parser {
         Ok(Statement::variable(name, initializer))
     }
 
+    fn function(&mut self, kind: &str) -> Result<Statement, ParseError> {
+        let name_token = self.consume(TokenType::Identifier, format!("Expect {} name.", kind).as_str())?;
+        let name = name_token.clone();
+
+        self.consume(TokenType::LeftParen, format!("Expect '(' after {} name.", kind).as_str())?;
+
+        let mut params: Vec<Token> = Vec::new();
+
+        if !self.check(&TokenType::RightParen) {
+            loop {
+                if params.len() >= 255 {
+                    error(self.peek(), "Can't have more than 255 parameters.");
+                }
+                
+                let param_token = self.consume(TokenType::Identifier, "Expect parameter name.")?;
+                params.push(param_token.clone());
+
+                if !self.match_types(&[TokenType::Comma]) {
+                    break;
+                }
+            }
+        }
+
+        self.consume(TokenType::RightParen, "Expect ')' after parameters.")?;
+        self.consume(TokenType::LeftBrace, format!("Expect '{{' before {} body.", kind).as_str())?;
+
+        let body = self.block()?;
+
+        Ok(Statement::function(name, params, body))
+    }
+
     fn block(&mut self) -> Result<Vec<Statement>, ParseError> {
         let mut statements: Vec<Statement> = Vec::new();
 
@@ -281,7 +352,7 @@ impl Parser {
 
     fn for_statement(&mut self) -> Result<Statement, ParseError> {
         self.consume(TokenType::LeftParen, "Expect '(' after 'for'.")?;
-        
+
         let initializer = if self.match_types(&[TokenType::Semicolon]) {
             None
         } else if self.match_types(&[TokenType::Var]) {
@@ -289,7 +360,7 @@ impl Parser {
         } else {
             Some(self.expression_statement()?)
         };
-        
+
         let condition = if !self.check(&TokenType::Semicolon) {
             Some(self.expression()?)
         } else {
@@ -297,7 +368,7 @@ impl Parser {
         };
 
         self.consume(TokenType::Semicolon, "Expect ';' after loop condition.")?;
-        
+
         let increment = if !self.check(&TokenType::RightParen) {
             Some(self.expression()?)
         } else {
@@ -309,7 +380,7 @@ impl Parser {
         if self.peek().token_type == TokenType::Var {
             return Err(error(self.peek(), "Expect expression."));
         }
-        
+
         let mut body = self.statement()?;
 
         if let Some(inc) = increment {
@@ -318,7 +389,7 @@ impl Parser {
                 Statement::expression(inc),
             ]);
         }
-        
+
         let condition = condition.unwrap_or(Expr::literal(crate::tokenizer::Literal::Boolean(true)));
         body = Statement::r#while(condition, body);
 

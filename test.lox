@@ -1,1 +1,10 @@
-for (;;) var foo;
+fun sayHi(first, last) {
+  print "Hi, " + first + " " + last + "!";
+}
+
+fun test() {
+    print clock();
+}
+
+sayHi("Dear", "Reader");
+test();

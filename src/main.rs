@@ -5,6 +5,7 @@ mod lox;
 mod interpreter;
 mod stmt;
 mod environment;
+mod function;
 
 use crate::interpreter::Interpreter;
 use crate::parser::Parser;

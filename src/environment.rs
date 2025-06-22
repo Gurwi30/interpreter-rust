@@ -5,6 +5,7 @@ use crate::interpreter::{RuntimeError, Value};
 use crate::tokenizer::Token;
 
 #[derive(Clone)]
+#[derive(PartialEq)]
 pub struct Environment {
     values: HashMap<String, Value>,
     enclosing: Option<Rc<RefCell<Environment>>>,
