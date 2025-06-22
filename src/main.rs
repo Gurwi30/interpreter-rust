@@ -105,16 +105,7 @@ fn parse(file_contents: &String) {
     let parse_res = Parser::new(tokens).expression();
 
     match parse_res {
-        Ok(expr) => {
-            match interpreter::eval(&expr) {
-                Ok(val) => println!("{}", val),
-                Err(err) => {
-                    eprintln!("{err}");
-                    exit(70);
-                }
-            }
-        },
-
+        Ok(expr) => println!("{}", expr),
         Err(err) => {
             eprintln!("{err}");
             exit(65)
