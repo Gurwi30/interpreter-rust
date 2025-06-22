@@ -264,8 +264,10 @@ impl Tokenizer {
                         }
                         Err(_) => {
                             self.had_error = true;
+                            
                             let ch = self.source[self.current_idx..].chars().next().unwrap_or('\0');
-                            lox::report(self.line, &format!("Unexpected character: '{}'", ch), "");
+                            let msg = format!("Unexpected character: '{}'", ch);
+                            lox::report(self.line, &msg);
                         }
                     }
                 }
@@ -289,7 +291,7 @@ impl Tokenizer {
 
         if self.is_at_end() {
             self.had_error = true;
-            lox::report(start_line, "", "Unterminated string.");
+            lox::report(start_line, "Unterminated string.");
             return;
         }
 

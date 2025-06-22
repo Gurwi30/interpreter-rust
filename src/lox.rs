@@ -1,7 +1,7 @@
 use crate::tokenizer::{Token, TokenType};
 
-pub fn report(line: usize, where_msg: &str, message: &str) {
-    eprintln!("[line {line}] Error{where_msg}: {message}");
+pub fn report(line: usize, message: &str) {
+    eprintln!("[line {line}] Error: {message}");
 }
 
 pub fn error(token: &Token, message: &str) {
