@@ -77,79 +77,9 @@ fn main() {
             }
         }
 
-        "parse" => {
-            parse(&file_contents);
-            // let mut tokenizer = Tokenizer::new(file_contents);
-            // let tokens = tokenizer.tokenize().clone();
-            // 
-            // if tokenizer.had_error {
-            //     exit(65);
-            // }
-            // 
-            // let expr = Parser::new(tokens.clone()).parse();
-            // 
-            // match expr {
-            //     Ok(ex) => println!("{}", ex),
-            //     Err(e) => {
-            //         eprintln!("{e}");
-            //         exit(65)
-            //     }
-            // }
-        },
-        
-        "evaluate" => {
-            eval(&file_contents);
-            // let mut tokenizer = Tokenizer::new(file_contents);
-            // let tokens = tokenizer.tokenize().clone();
-            // 
-            // if tokenizer.had_error {
-            //     exit(65);
-            // }
-            // 
-            // let expr = Parser::new(tokens.clone()).parse();
-            // 
-            // match expr {
-            //     Ok(ex) => {
-            //         match interpreter::eval(&ex) {
-            //             Ok(val) => println!("{}", val),
-            //             Err(err) => {
-            //                 writeln!(io::stderr(), "{}", err).unwrap();
-            //                 exit(70)
-            //             }
-            //         }
-            //     }
-            //     Err(err) => { 
-            //         eprintln!("{err}");
-            //         exit(70);
-            //     }
-            // };
-        },
-        
-        "run" => {
-            run(&file_contents);
-            // let mut tokenizer = Tokenizer::new(file_contents);
-            // let tokens = tokenizer.tokenize().clone();
-            // 
-            // if tokenizer.had_error {
-            //     exit(65);
-            // }
-            // 
-            // let expr = Parser::new(tokens.clone()).parse();
-            // 
-            // match expr {
-            //     Ok(expr) => {
-            //         if let Err(err) = interpreter::run(&expr) {
-            //             eprintln!("{err}");
-            //             exit(70)
-            //         }
-            //     },
-            // 
-            //     Err(err) => {
-            //         eprintln!("{err}");
-            //         exit(65)
-            //     }
-            // }  
-        },
+        "parse" => parse(&file_contents),
+        "evaluate" => eval(&file_contents),
+        "run" => run(&file_contents),
         
         _ => {
             writeln!(io::stderr(), "Unknown command: {}", command).unwrap();
