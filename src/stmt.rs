@@ -13,6 +13,10 @@ pub enum Statement {
         initializer: Expr
     },
 
+    Block {
+        statements: Vec<Statement>
+    },
+
     Print {
         expr: Expr,
     }
@@ -27,6 +31,10 @@ impl Statement {
         Statement::Variable { name, initializer }
     }
     
+    pub fn block(statements: Vec<Statement>) -> Statement {
+        Statement::Block { statements }
+    }
+
     pub fn print(expr: Expr) -> Statement {
         Statement::Print { expr }
     }
@@ -37,7 +45,17 @@ impl fmt::Display for Statement {
         match self {
             Statement::Expression { expr } => write!(f, "{}", expr),
             Statement::Variable { name, initializer } => write!(f, "var {name} {initializer}"),
-            Statement::Print { expr } => write!(f, "{}", expr)
+            Statement::Print { expr } => write!(f, "{}", expr),
+            
+            Statement::Block { statements } => {
+                write!(f, "{{ ")?;
+
+                for stmt in statements {
+                    write!(f, "{} ", stmt)?;
+                }
+
+                write!(f, "}}")
+            },
         }
     }
 }

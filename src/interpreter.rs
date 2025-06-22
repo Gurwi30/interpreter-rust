@@ -1,9 +1,12 @@
+use std::cell::RefCell;
 use crate::environment::Environment;
 use crate::expr::Expr;
 use crate::stmt::Statement;
 use crate::tokenizer::{Literal, Token, TokenType};
 use std::fmt;
 use std::fmt::{Display, Formatter};
+use std::rc::Rc;
+use crate::run;
 
 #[derive(Debug)]
 #[derive(Clone)]
@@ -62,13 +65,13 @@ impl Value {
 }
 
 pub struct Interpreter {
-    environment: Environment,
+    environment: Rc<RefCell<Environment>>,
 }
 
 impl Interpreter {
     pub fn new() -> Interpreter {
         Interpreter {
-            environment: Environment::new(),
+            environment: Rc::new(RefCell::new(Environment::new())),
         }
     }
 
@@ -81,7 +84,18 @@ impl Interpreter {
 
                 Statement::Variable { name, initializer } => {
                     let value = self.eval(initializer)?;
-                    self.environment.define(name.lexeme.clone(), value);
+                    self.environment.borrow_mut().define(name.lexeme.clone(), value);
+                },
+
+                Statement::Block { statements } => {
+                    let previous = self.environment.clone();
+                    self.environment = Rc::new(RefCell::new(Environment::with_parent(previous.clone())));
+
+                    let result = self.run(statements);
+
+                    self.environment = previous;
+                    
+                    result?;
                 }
 
                 Statement::Print { expr } => {
@@ -180,17 +194,17 @@ impl Interpreter {
 
             Expr::Variable { name } => {
                 let env = &self.environment;
-                
-                env.get(name)
+
+                env.borrow().get(name)
                     .map(|val| val.clone())
             },
-            
+
             Expr::Assign { name, value } => {
                 let value = self.eval(value)?;
-                self.environment.assign(name.clone(), value.clone())?;
+                self.environment.borrow_mut().assign(name.clone(), value.clone())?;
                 Ok(value)
             }
-            
+
         }
 
     }
