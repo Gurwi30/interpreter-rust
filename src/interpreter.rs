@@ -82,8 +82,7 @@ impl Value {
 
 #[derive(Clone, PartialEq)]
 pub struct Interpreter {
-    pub environment: Rc<RefCell<Environment>>,
-    pub globals: Environment
+    pub global_env: Rc<RefCell<Environment>>,
 }
 
 impl Interpreter {
@@ -102,8 +101,7 @@ impl Interpreter {
         );
 
         Interpreter {
-            environment: Rc::new(RefCell::new(Environment::new())),
-            globals
+            global_env: Rc::new(RefCell::new(globals.clone())),
         }
     }
 
@@ -123,19 +121,19 @@ impl Interpreter {
 
             Statement::Variable { name, initializer } => {
                 let value = self.eval(initializer)?;
-                self.environment.borrow_mut().define(name.lexeme.clone(), value);
+                self.global_env.borrow_mut().define(name.lexeme.clone(), value);
             },
 
             Statement::Block { statements } => {
-                let previous = self.environment.clone();
-                self.environment = Rc::new(RefCell::new(Environment::with_parent(previous.clone())));
+                let previous = self.global_env.clone();
+                self.global_env = Rc::new(RefCell::new(Environment::with_parent(previous.clone())));
                 //
                 // let result = self.run(statements);
                 //
                 // self.environment = previous;
                 //
                 // result?;
-                self.execute_block(statements, self.environment.clone())?;
+                self.execute_block(statements, self.global_env.clone())?;
             },
 
             Statement::If { condition, then_branch, else_branch } => {
@@ -164,7 +162,7 @@ impl Interpreter {
                     body.clone()
                 ));
                 
-                self.environment
+                self.global_env
                     .borrow_mut()
                     .define(name.lexeme.clone(), Value::Callable(Rc::new(func)));
             }
@@ -178,9 +176,9 @@ impl Interpreter {
         statements: &Vec<Statement>,
         new_env: Rc<RefCell<Environment>>,
     ) -> Result<(), RuntimeError> {
-        let previous = Rc::clone(&self.environment);
+        let previous = Rc::clone(&self.global_env);
 
-        self.environment = Rc::clone(&new_env);
+        self.global_env = Rc::clone(&new_env);
 
         let result = (|| {
             for statement in statements {
@@ -190,7 +188,7 @@ impl Interpreter {
             Ok(())
         })();
 
-        self.environment = previous;
+        self.global_env = previous;
 
         result
     }
@@ -280,7 +278,7 @@ impl Interpreter {
             },
 
             Expr::Variable { name } => {
-                let env = &self.environment;
+                let env = &self.global_env;
 
                 env.borrow().get(name)
                     .map(|val| val.clone())
@@ -288,7 +286,7 @@ impl Interpreter {
 
             Expr::Assign { name, value } => {
                 let value = self.eval(value)?;
-                self.environment.borrow_mut().assign(name.clone(), value.clone())?;
+                self.global_env.borrow_mut().assign(name.clone(), value.clone())?;
                 Ok(value)
             },
 

@@ -36,7 +36,7 @@ impl LoxCallable for LoxFunction {
     }
 
     fn call(&self, interpreter: &mut Interpreter, arguments: Vec<Value>) -> Result<Value, RuntimeError> {
-        let mut env = Environment::with_parent(Rc::new(RefCell::new(interpreter.globals.clone())));
+        let mut env = Environment::with_parent(interpreter.global_env.clone());
 
         if let Statement::Function { params, body, .. } = &self.declaration {
             for i in 0..params.len() {
