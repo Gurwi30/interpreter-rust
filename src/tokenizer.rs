@@ -205,16 +205,16 @@ impl Display for Literal {
 
 pub struct Tokenizer {
     tokens: Vec<Token>,
-    current_idx: usize,   // byte index into source
+    current_idx: usize,
     line: usize,
     pub had_error: bool,
-    source_size: usize,   // byte length of source string
+    source_size: usize, 
     source: String,
 }
 
 impl Tokenizer {
     pub fn new(source: String) -> Tokenizer {
-        let source_size = source.len();  // byte length here!
+        let source_size = source.len();
         Tokenizer {
             tokens: Vec::new(),
             current_idx: 0,
