@@ -158,7 +158,7 @@ impl Parser {
 
         if self.match_types(&[TokenType::LeftParen]) {
             let expr: Expr = self.expression()?;
-            let _ = self.consume(TokenType::RightParen, "Expect ')' after expression.");
+            self.consume(TokenType::RightParen, "Expect ')' after expression.")?;
 
             return Ok(Expr::grouping(expr));
         }
