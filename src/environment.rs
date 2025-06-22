@@ -17,12 +17,22 @@ impl Environment {
         self.values.insert(name, value);
     }
 
+    pub fn assign(&mut self, name: Token, value: Value) -> Result<(), RuntimeError> {
+        if self.values.contains_key(name.lexeme.as_str()) {
+            self.values.insert(name.lexeme, value);
+            
+            return Ok(())
+        }
+
+        Err(RuntimeError::new(name.clone(), format!("Undefined variable '{}'.", name.lexeme)))
+    }
+
     pub fn get<'a>(&'a self, name: &'a Token) -> Result<&'a Value, RuntimeError> {
         match self.values.get(name.lexeme.as_str()) {
             Some(val) => Ok(val),
             None => Err(RuntimeError::new(name.clone(), format!("Undefined variable '{}'.", name.lexeme)))
         }
     }
-    
-    
+
+
 }

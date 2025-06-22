@@ -94,7 +94,7 @@ impl Interpreter {
         Ok(())
     }
 
-    pub fn eval<'a>(&'a self, expr: &'a Expr) -> Result<Value, RuntimeError> {
+    pub fn eval<'a>(&mut self, expr: &'a Expr) -> Result<Value, RuntimeError> {
 
         match expr {
             Expr::Literal { literal } => {
@@ -183,6 +183,12 @@ impl Interpreter {
                 
                 env.get(name)
                     .map(|val| val.clone())
+            },
+            
+            Expr::Assign { name, value } => {
+                let value = self.eval(value)?;
+                self.environment.assign(name.clone(), value.clone())?;
+                Ok(value)
             }
             
         }
