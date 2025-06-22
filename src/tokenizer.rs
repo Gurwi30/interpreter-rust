@@ -289,7 +289,7 @@ impl Tokenizer {
 
         if self.is_at_end() {
             self.had_error = true;
-            lox::report(start_line, "at end", "Unterminated string.");
+            lox::report(start_line, "", "Unterminated string.");
             return;
         }
 
