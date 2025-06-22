@@ -97,6 +97,32 @@ impl Parser {
         Ok(expr)
     }
 
+    fn or(&mut self) -> Result<Expr, ParseError> {
+        let mut expr = self.and()?;
+
+        while self.match_types(&[TokenType::Or]) {
+            let operator = self.previous().clone();
+            let right = self.and()?;
+
+            expr = Expr::logical(expr, operator, right);
+        }
+
+        Ok(expr)
+    }
+    
+    fn and(&mut self) -> Result<Expr, ParseError> {
+        let mut expr = self.equality()?;
+        
+        while self.match_types(&[TokenType::And]) {
+            let operator = self.previous().clone();
+            let right = self.equality()?;
+            
+            expr = Expr::logical(expr, operator, right);
+        }
+        
+        Ok(expr)
+    }
+
     fn equality(&mut self) -> Result<Expr, ParseError> {
         let mut expr: Expr = self.comparison()?;
 
@@ -235,7 +261,7 @@ impl Parser {
 
         Ok(Statement::r#if(condition, then_branch, else_branch))
     }
-    
+
     fn print_statement(&mut self) -> Result<Statement, ParseError> {
         let expr = self.expression()?;
         self.consume(TokenType::Semicolon, "Expect ';' after value.")?;

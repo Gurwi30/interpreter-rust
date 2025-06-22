@@ -216,6 +216,16 @@ impl Interpreter {
                 let value = self.eval(value)?;
                 self.environment.borrow_mut().assign(name.clone(), value.clone())?;
                 Ok(value)
+            },
+
+            Expr::Logical { left, operator , right } => {
+                let left = self.eval(left)?;
+
+                if !is_truthy(left.clone()) {
+                    return Ok(left);
+                }
+
+                self.eval(right)
             }
 
         }

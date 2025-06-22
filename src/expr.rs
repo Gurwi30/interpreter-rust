@@ -28,6 +28,12 @@ pub enum Expr {
     Assign {
         name: Token,
         value: Box<Expr>
+    },
+
+    Logical {
+        left: Box<Expr>,
+        operator: Token,
+        right: Box<Expr>
     }
 
 }
@@ -40,7 +46,8 @@ impl Display for Expr {
             Expr::Binary { left, operator, right } => write!(f, "({} {} {})", operator.lexeme, left, right),
             Expr::Grouping { expr } => write!(f, "(group {})", expr),
             Expr::Variable { name } => write!(f, "var {}", name),
-            Expr::Assign { name, value } => write!(f, "{} = {}", name, value)
+            Expr::Assign { name, value } => write!(f, "{} = {}", name, value),
+            Expr::Logical { left, operator, right } => write!(f, "({} {} {})", operator.lexeme, left, right),
         }
     }
 }
@@ -66,9 +73,13 @@ impl Expr {
     pub fn variable(name: Token) -> Expr {
         Expr::Variable { name }
     }
-    
+
     pub fn assign(name: Token, value: Expr) -> Expr {
         Expr::Assign { name, value: Box::new(value) }
+    }
+    
+    pub fn logical(left: Expr, operator: Token, right: Expr) -> Expr {
+        Expr::Logical { left: Box::new(left), operator, right: Box::new(right) }
     }
     
 }
