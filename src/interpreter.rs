@@ -93,7 +93,17 @@ impl Interpreter {
                 let since_epoch = start.duration_since(UNIX_EPOCH)
                     .expect("Time went backwards");
                 Ok(Value::Float(since_epoch.as_secs() as f64))
-            })),
+            }))
+        );
+
+        globals.define(
+            "clock".to_string(),
+            Value::Callable(function::create_builtin("print", 1, | args | {
+                let value = args.get(0).unwrap();
+                println!("{}", value);
+                
+                Ok(Value::Nil)
+            }))
         );
 
         let globals_rc = Rc::new(RefCell::new(globals));

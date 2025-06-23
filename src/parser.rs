@@ -32,7 +32,7 @@ impl PartialEq<&TokenType> for &Token {
 }
 
 impl Parser {
-    
+
     pub fn new(tokens: Vec<Token>) -> Parser {
         Parser {
             tokens,
@@ -44,28 +44,13 @@ impl Parser {
         let mut statements: Vec<Statement> = Vec::new();
 
         while !self.is_at_end() {
-            match self.declaration() {
-                Ok(stmt) => statements.push(stmt),
-                Err(e) => {
-                    //self.synchronize();
-                    return Err(e);
-                }
-            }
+            statements.push(self.declaration()?)
         }
 
         Ok(statements)
     }
 
     fn declaration(&mut self) -> Result<Statement, ParseError> {
-        // if self.match_types(&[TokenType::Fun]) {
-        //     return self.function("function");
-        // }
-        // 
-        // if self.match_types(&[TokenType::Var]) {
-        //     return self.var_declaration();
-        // }
-        // 
-        // self.statement()
         let result = (|| {
             if self.match_types(&[TokenType::Fun]) {
                 return self.function("function");
@@ -110,7 +95,9 @@ impl Parser {
         if !self.check(&TokenType::RightParen) {
             loop {
                 if params.len() >= 255 {
-                    error(self.peek(), "Can't have more than 255 parameters.");
+                    if let Some(token) = self.peek() {
+                        error(token, "Can't have more than 255 parameters.");
+                    }
                 }
 
                 let param_token = self.consume(TokenType::Identifier, "Expect parameter name.")?;
@@ -212,8 +199,10 @@ impl Parser {
 
         self.consume(TokenType::RightParen, "Expect ')' after for clauses.")?;
 
-        if self.peek().token_type == TokenType::Var {
-            return Err(error(self.peek(), "Expect expression."));
+        if let Some(token) = self.peek() {
+            if token.token_type == TokenType::Var {
+                return Err(error(token, "Expect expression."));
+            }
         }
 
         let mut body = self.statement()?;
@@ -261,7 +250,10 @@ impl Parser {
         let expr = self.or()?;
 
         if self.match_types(&[TokenType::Equal]) {
-            let equals = self.previous().clone();
+            let equals = self.previous().ok_or_else(|| {
+                error(self.peek().unwrap_or_else(|| &self.tokens[self.tokens.len()-1]), "Missing '=' token.")
+            })?.clone();
+
             let value = self.assignment()?;
 
             if let Expr::Variable { name } = expr {
@@ -278,7 +270,10 @@ impl Parser {
         let mut expr = self.and()?;
 
         while self.match_types(&[TokenType::Or]) {
-            let operator = self.previous().clone();
+            let operator = self.previous().ok_or_else(|| {
+                error(self.peek().unwrap_or_else(|| &self.tokens[self.tokens.len()-1]), "Missing 'or' operator.")
+            })?.clone();
+
             let right = self.and()?;
 
             expr = Expr::logical(expr, operator, right);
@@ -291,7 +286,10 @@ impl Parser {
         let mut expr = self.equality()?;
 
         while self.match_types(&[TokenType::And]) {
-            let operator = self.previous().clone();
+            let operator = self.previous().ok_or_else(|| {
+                error(self.peek().unwrap_or_else(|| &self.tokens[self.tokens.len()-1]), "Missing 'and' operator.")
+            })?.clone();
+
             let right = self.equality()?;
 
             expr = Expr::logical(expr, operator, right);
@@ -304,7 +302,10 @@ impl Parser {
         let mut expr: Expr = self.comparison()?;
 
         while self.match_types(&[TokenType::BangEqual, TokenType::EqualEqual]) {
-            let operator: Token = self.previous().clone();
+            let operator: Token = self.previous().ok_or_else(|| {
+                error(self.peek().unwrap_or_else(|| &self.tokens[self.tokens.len()-1]), "Missing equality operator.")
+            })?.clone();
+
             let right: Expr = self.comparison()?;
 
             expr = Expr::binary(expr, operator, right);
@@ -317,7 +318,10 @@ impl Parser {
         let mut expr: Expr = self.term()?;
 
         while self.match_types(&[TokenType::Greater, TokenType::GreaterEqual, TokenType::Less, TokenType::LessEqual]) {
-            let operator: Token = self.previous().clone();
+            let operator: Token = self.previous().ok_or_else(|| {
+                error(self.peek().unwrap_or_else(|| &self.tokens[self.tokens.len()-1]), "Missing comparison operator.")
+            })?.clone();
+
             let right: Expr = self.term()?;
 
             expr = Expr::binary(expr, operator, right);
@@ -330,7 +334,10 @@ impl Parser {
         let mut expr: Expr = self.factor()?;
 
         while self.match_types(&[TokenType::Minus, TokenType::Plus]) {
-            let operator = self.previous().clone();
+            let operator = self.previous().ok_or_else(|| {
+                error(self.peek().unwrap_or_else(|| &self.tokens[self.tokens.len()-1]), "Missing term operator.")
+            })?.clone();
+
             let right = self.factor()?;
 
             expr = Expr::binary(expr, operator, right);
@@ -343,7 +350,10 @@ impl Parser {
         let mut expr: Expr = self.unary()?;
 
         while self.match_types(&[TokenType::Slash, TokenType::Star]) {
-            let operator: Token = self.previous().clone();
+            let operator: Token = self.previous().ok_or_else(|| {
+                error(self.peek().unwrap_or_else(|| &self.tokens[self.tokens.len()-1]), "Missing factor operator.")
+            })?.clone();
+
             let right: Expr = self.unary()?;
 
             expr = Expr::binary(expr, operator, right);
@@ -354,7 +364,10 @@ impl Parser {
 
     fn unary(&mut self) -> Result<Expr, ParseError> {
         if self.match_types(&[TokenType::Bang, TokenType::Minus]) {
-            let operator: Token = self.previous().clone();
+            let operator: Token = self.previous().ok_or_else(|| {
+                error(self.peek().unwrap_or_else(|| &self.tokens[self.tokens.len()-1]), "Missing unary operator.")
+            })?.clone();
+
             let right: Expr = self.unary()?;
 
             return Ok(Expr::unary(operator, right));
@@ -383,7 +396,9 @@ impl Parser {
         if !self.check(&TokenType::RightParen) {
             loop {
                 if arguments.len() >= 255 {
-                    error(self.peek(), "Can't have more than 255 arguments.");
+                    if let Some(token) = self.peek() {
+                        error(token, "Can't have more than 255 arguments.");
+                    }
                 }
 
                 arguments.push(self.expression()?);
@@ -412,11 +427,13 @@ impl Parser {
         }
 
         if self.match_types(&[TokenType::Number, TokenType::String]) {
-            return Ok(Expr::literal(self.previous().clone().literal.unwrap()))
+            let prev = self.previous().ok_or_else(|| error(self.peek().unwrap_or_else(|| &self.tokens[self.tokens.len()-1]), "Expect literal."))?;
+            return Ok(Expr::literal(prev.literal.clone().unwrap()))
         }
 
         if self.match_types(&[TokenType::Identifier]) {
-            return Ok(Expr::variable(self.previous().clone()))
+            let prev = self.previous().ok_or_else(|| error(self.peek().unwrap_or_else(|| &self.tokens[self.tokens.len()-1]), "Expect identifier."))?;
+            return Ok(Expr::variable(prev.clone()))
         }
 
         if self.match_types(&[TokenType::LeftParen]) {
@@ -425,24 +442,26 @@ impl Parser {
 
             return Ok(Expr::grouping(expr));
         }
-        
-        Err(error(self.peek(), "Expect expression."))
+
+        Err(error(self.peek().unwrap_or_else(|| &self.tokens[self.tokens.len()-1]), "Expect expression."))
     }
 
     fn synchronize(&mut self) {
         self.advance();
 
         while !self.is_at_end() {
-            if self.previous().token_type == TokenType::Semicolon {
-                return;
+            if let Some(prev) = self.previous() {
+                if prev.token_type == TokenType::Semicolon {
+                    return;
+                }
             }
 
-            match self.peek().token_type {
-                TokenType::Class | TokenType::Fun | TokenType::Var | TokenType::For | TokenType::While | TokenType::If | TokenType::Print | TokenType::Return => {
+            match self.peek().map(|t| &t.token_type) {
+                Some(TokenType::Class) | Some(TokenType::Fun) | Some(TokenType::Var) | Some(TokenType::For) | Some(TokenType::While) | Some(TokenType::If) | Some(TokenType::Print) | Some(TokenType::Return) => {
                     return;
                 },
 
-                _ => self.advance()
+                _ => { self.advance(); }
             };
         }
     }
@@ -465,14 +484,14 @@ impl Parser {
             return false;
         }
 
-        self.peek() == token_type
+        self.peek().map(|tok| &tok.token_type == token_type).unwrap_or(false)
     }
 
     fn advance(&mut self) -> &Token {
         self.cur_idx += 1;
 
         self.tokens.get(self.cur_idx - 1)
-            .unwrap_or(self.tokens.last().unwrap())
+            .unwrap_or_else(|| self.tokens.last().unwrap())
     }
 
     fn consume(&mut self, token_type: TokenType, message: &str) -> Result<&Token, ParseError> {
@@ -480,21 +499,25 @@ impl Parser {
             return Ok(self.advance());
         }
 
-        Err(error(self.peek(), message))
+        Err(error(self.peek().unwrap_or_else(|| self.tokens.last().unwrap()), message))
     }
 
-    fn peek(&self) -> &Token {
-        self.tokens.get(self.cur_idx).unwrap()
+    fn previous(&self) -> Option<&Token> {
+        if self.cur_idx == 0 {
+            None
+        } else {
+            self.tokens.get(self.cur_idx - 1)
+        }
     }
 
-    fn previous(&self) -> &Token {
-        self.tokens.get(self.cur_idx - 1).unwrap()
+    fn peek(&self) -> Option<&Token> {
+        self.tokens.get(self.cur_idx)
     }
 
     fn is_at_end(&self) -> bool {
-        self.peek().token_type == TokenType::EOF
+        self.peek().map(|t| t.token_type == TokenType::EOF).unwrap_or(true)
     }
-    
+
 }
 
 fn error(token: &Token, message: &str) -> ParseError {
