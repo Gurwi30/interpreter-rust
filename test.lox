@@ -3,6 +3,8 @@
     var bar = 62;
     {
         print(hello + bar);
+        print "Statement";
+        print(clock());
     }
     // Missing closing curly brace
     // Expect compile error

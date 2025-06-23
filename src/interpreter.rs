@@ -97,7 +97,7 @@ impl Interpreter {
         );
 
         globals.define(
-            "clock".to_string(),
+            "print".to_string(),
             Value::Callable(function::create_builtin("print", 1, | args | {
                 let value = args.get(0).unwrap();
                 println!("{}", value);
