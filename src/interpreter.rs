@@ -3,12 +3,10 @@ use crate::expr::Expr;
 use crate::stmt::Statement;
 use crate::tokenizer::{Literal, Token, TokenType};
 use std::cell::RefCell;
-use std::fmt;
-use std::fmt::{Display, Formatter};
+use std::fmt::{self, Display, Formatter};
 use std::rc::Rc;
 use std::time::{SystemTime, UNIX_EPOCH};
-use crate::function;
-use crate::function::{LoxCallable, LoxFunction};
+use crate::function::{self, LoxCallable, LoxFunction};
 
 #[derive(Debug)]
 pub struct RuntimeError {
@@ -22,7 +20,7 @@ impl Display for RuntimeError {
     }
 }
 
-impl std::error::Error for RuntimeError { }
+impl std::error::Error for RuntimeError {}
 
 impl RuntimeError {
     pub fn new(token: Token, message: String) -> RuntimeError {
@@ -37,7 +35,7 @@ pub enum Value {
     Float(f64),
     Boolean(bool),
     Callable(Rc<dyn LoxCallable>),
-    Nil
+    Nil,
 }
 
 impl PartialEq for Value {
@@ -67,22 +65,21 @@ impl Display for Value {
 }
 
 impl Value {
-
     fn from_literal(literal: &Literal) -> Value {
         match literal {
             Literal::Integer(i) => Value::Integer(*i),
             Literal::Float(f) => Value::Float(*f),
             Literal::Boolean(b) => Value::Boolean(*b),
             Literal::String(s) => Value::String(s.to_string()),
-            Literal::Nil => Value::Nil
+            Literal::Nil => Value::Nil,
         }
     }
-
 }
 
 #[derive(Clone, PartialEq)]
 pub struct Interpreter {
-    pub global_env: Rc<RefCell<Environment>>,
+    pub globals: Rc<RefCell<Environment>>,
+    pub environment: Rc<RefCell<Environment>>
 }
 
 impl Interpreter {
@@ -95,21 +92,22 @@ impl Interpreter {
                 let start = SystemTime::now();
                 let since_epoch = start.duration_since(UNIX_EPOCH)
                     .expect("Time went backwards");
-
                 Ok(Value::Float(since_epoch.as_secs() as f64))
-            }))
+            })),
         );
 
+        let globals_rc = Rc::new(RefCell::new(globals));
+
         Interpreter {
-            global_env: Rc::new(RefCell::new(globals.clone())),
+            globals: Rc::clone(&globals_rc),
+            environment: globals_rc,
         }
     }
 
-    pub fn run(&mut self, statements: &Vec<Statement>) -> Result<(), RuntimeError> {
+    pub fn run(&mut self, statements: &[Statement]) -> Result<(), RuntimeError> {
         for statement in statements {
             self.run_single(statement)?;
         }
-
         Ok(())
     }
 
@@ -117,52 +115,49 @@ impl Interpreter {
         match statement {
             Statement::Expression { expr } => {
                 self.eval(expr)?;
-            },
+            }
 
             Statement::Variable { name, initializer } => {
                 let value = self.eval(initializer)?;
-                self.global_env.borrow_mut().define(name.lexeme.clone(), value);
-            },
+                self.environment.borrow_mut().define(name.lexeme.clone(), value);
+            }
 
             Statement::Block { statements } => {
-                let previous = self.global_env.clone();
-                self.global_env = Rc::new(RefCell::new(Environment::with_parent(previous.clone())));
-                //
-                // let result = self.run(statements);
-                //
-                // self.environment = previous;
-                //
-                // result?;
-                self.execute_block(statements, self.global_env.clone())?;
-            },
+                let new_env = Rc::new(RefCell::new(Environment::with_parent(Rc::clone(&self.environment))));
+                self.execute_block(statements, new_env)?;
+            }
 
-            Statement::If { condition, then_branch, else_branch } => {
-                if is_truthy(&self.eval(&condition)?) {
-                    self.run_single(&then_branch)?;
+            Statement::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                if is_truthy(&self.eval(condition)?) {
+                    self.run_single(then_branch)?;
                 } else if let Some(else_branch) = else_branch {
-                    self.run_single(&else_branch)?;
+                    self.run_single(else_branch)?;
                 }
-            },
+            }
 
             Statement::While { condition, body } => {
-                while is_truthy(&self.eval(&condition)?) {
-                    self.run_single(&body)?;
+                while is_truthy(&self.eval(condition)?) {
+                    self.run_single(body)?;
                 }
-            },
+            }
 
             Statement::Print { expr } => {
                 let val = self.eval(expr)?;
                 println!("{val}");
-            },
+            }
 
             Statement::Function { name, params, body } => {
                 let func = LoxFunction::new(Statement::function(
                     name.clone(),
                     params.clone(),
-                    body.clone()
+                    body.clone(),
                 ));
                 
-                self.global_env
+                self.environment
                     .borrow_mut()
                     .define(name.lexeme.clone(), Value::Callable(Rc::new(func)));
             }
@@ -171,126 +166,88 @@ impl Interpreter {
         Ok(())
     }
 
-    pub fn execute_block(
-        &mut self,
-        statements: &Vec<Statement>,
-        new_env: Rc<RefCell<Environment>>,
-    ) -> Result<(), RuntimeError> {
-        let previous = Rc::clone(&self.global_env);
+    pub fn execute_block(&mut self, statements: &[Statement], new_env: Rc<RefCell<Environment>>) -> Result<(), RuntimeError> {
+        let previous = Rc::clone(&self.environment);
 
-        self.global_env = Rc::clone(&new_env);
+        self.environment = Rc::clone(&new_env);
 
         let result = (|| {
             for statement in statements {
-                self.run_single(&statement)?;
+                self.run_single(statement)?;
             }
-
             Ok(())
         })();
 
-        self.global_env = previous;
+        self.environment = previous;
 
         result
     }
 
     pub fn eval(&mut self, expr: &Expr) -> Result<Value, RuntimeError> {
-
         match expr {
-            Expr::Literal { literal } => {
-                Ok(Value::from_literal(literal))
-            },
+            Expr::Literal { literal } => Ok(Value::from_literal(literal)),
 
             Expr::Unary { operator, right } => {
-                let right = self.eval(right);
+                let right = self.eval(right)?;
 
                 match operator.token_type {
-                    TokenType::Minus => {
-                        match right {
-                            Ok(Value::Integer(i)) => Ok(Value::Integer(-i)),
-                            Ok(Value::Float(f)) => Ok(Value::Float(-f)),
-                            _ => Err(RuntimeError::new(operator.clone(), "Operand must be a number".to_string()))
-                        }
+                    TokenType::Minus => match right {
+                        Value::Integer(i) => Ok(Value::Integer(-i)),
+                        Value::Float(f) => Ok(Value::Float(-f)),
+                        _ => Err(RuntimeError::new(
+                            operator.clone(),
+                            "Operand must be a number".to_string(),
+                        )),
                     },
 
-                    TokenType::Bang => {
-                        Ok(Value::Boolean(!is_truthy(&right?)))
-                    }
+                    TokenType::Bang => Ok(Value::Boolean(!is_truthy(&right))),
 
-                    _ => Err(RuntimeError::new(operator.clone(), "Unary operator not supported".to_string()))
+                    _ => Err(RuntimeError::new(
+                        operator.clone(),
+                        "Unary operator not supported".to_string(),
+                    )),
                 }
-            },
+            }
 
             Expr::Binary { left, operator, right } => {
                 let left = self.eval(left)?;
                 let right = self.eval(right)?;
 
                 match (&left, &right, &operator.token_type) {
-                    (Value::Float(l), Value::Float(r), TokenType::Plus) => {
-                        Ok(Value::Float(l + r))
-                    },
-
-                    (Value::Float(l), Value::Float(r), TokenType::Minus) => {
-                        Ok(Value::Float(l - r))
-                    },
-
-                    (Value::Float(l), Value::Float(r), TokenType::Star) => {
-                        Ok(Value::Float(l * r))
-                    },
-
-                    (Value::Float(l), Value::Float(r), TokenType::Slash) => {
-                        Ok(Value::Float(l / r))
-                    },
-
-                    (Value::String(l), Value::String(r), TokenType::Plus) => {
-                        Ok(Value::String(format!("{}{}", l, r)))
-                    },
-
-                    (Value::Float(l), Value::Float(r), TokenType::Greater) => {
-                        Ok(Value::Boolean(l > r))
-                    },
-
-                    (Value::Float(l), Value::Float(r), TokenType::GreaterEqual) => {
-                        Ok(Value::Boolean(l >= r))
-                    },
-
-                    (Value::Float(l), Value::Float(r), TokenType::Less) => {
-                        Ok(Value::Boolean(l < r))
-                    },
-
-                    (Value::Float(l), Value::Float(r), TokenType::LessEqual) => {
-                        Ok(Value::Boolean(l <= r))
-                    },
-
-                    (_, _, TokenType::EqualEqual) => {
-                        Ok(Value::Boolean(is_equal(&left, &right)))
-                    },
-
-                    (_, _, TokenType::BangEqual) => {
-                        Ok(Value::Boolean(!is_equal(&left, &right)))
-                    }
-
-                    _ => Err(RuntimeError::new(operator.clone(), "Binary operator not supported".to_string())),
+                    (Value::Float(l), Value::Float(r), TokenType::Plus) => Ok(Value::Float(l + r)),
+                    (Value::Float(l), Value::Float(r), TokenType::Minus) => Ok(Value::Float(l - r)),
+                    (Value::Float(l), Value::Float(r), TokenType::Star) => Ok(Value::Float(l * r)),
+                    (Value::Float(l), Value::Float(r), TokenType::Slash) => Ok(Value::Float(l / r)),
+                    
+                    (Value::String(l), Value::String(r), TokenType::Plus) => Ok(Value::String(format!("{}{}", l, r))),
+                    
+                    (Value::Float(l), Value::Float(r), TokenType::Greater) => Ok(Value::Boolean(l > r)),
+                    (Value::Float(l), Value::Float(r), TokenType::GreaterEqual) => Ok(Value::Boolean(l >= r)),
+                    
+                    (Value::Float(l), Value::Float(r), TokenType::Less) => Ok(Value::Boolean(l < r)),
+                    (Value::Float(l), Value::Float(r), TokenType::LessEqual) => Ok(Value::Boolean(l <= r)),
+                    
+                    (_, _, TokenType::EqualEqual) => Ok(Value::Boolean(is_equal(&left, &right))),
+                    (_, _, TokenType::BangEqual) => Ok(Value::Boolean(!is_equal(&left, &right))),
+                    
+                    _ => Err(RuntimeError::new(
+                        operator.clone(),
+                        "Binary operator not supported".to_string(),
+                    )),
                 }
-            },
+            }
 
-            Expr::Grouping { expr } => {
-                self.eval(expr)
-            },
+            Expr::Grouping { expr } => self.eval(expr),
 
-            Expr::Variable { name } => {
-                let env = &self.global_env;
-
-                env.borrow().get(name)
-                    .map(|val| val.clone())
-            },
+            Expr::Variable { name } => self.environment.borrow().get(name),
 
             Expr::Assign { name, value } => {
                 let value = self.eval(value)?;
-                self.global_env.borrow_mut().assign(name.clone(), value.clone())?;
+                self.environment.borrow_mut().assign(name.clone(), value.clone())?;
                 Ok(value)
-            },
+            }
 
-            Expr::Logical { left, operator , right } => {
+            Expr::Logical { left, operator, right } => {
                 let left = self.eval(left)?;
 
                 if operator.token_type == TokenType::Or {
@@ -304,9 +261,9 @@ impl Interpreter {
                 }
 
                 self.eval(right)
-            },
+            }
 
-            Expr::Call { callee, paren, arguments } => {
+            Expr::Call { callee, paren, arguments, } => {
                 let value = self.eval(callee)?;
                 let mut args: Vec<Value> = Vec::new();
 
@@ -316,24 +273,31 @@ impl Interpreter {
 
                 if let Value::Callable(callable) = value {
                     if args.len() != callable.arity() {
-                        return Err(RuntimeError::new(paren.clone(), format!("Expected {} arguments but got {}.", callable.arity(), args.len())));
+                        return Err(RuntimeError::new(
+                            paren.clone(),
+                            format!(
+                                "Expected {} arguments but got {}.",
+                                callable.arity(),
+                                args.len()
+                            ),
+                        ));
                     }
 
                     callable.call(self, args)
                 } else {
-                    Err(RuntimeError::new(paren.clone(), "Can only call functions and classes.".to_string()))
+                    Err(RuntimeError::new(
+                        paren.clone(),
+                        "Can only call functions and classes.".to_string(),
+                    ))
                 }
-
             }
-
         }
-
     }
 }
 
 fn is_truthy(value: &Value) -> bool {
     match value {
-        Value::Boolean(b) => b.clone(),
+        Value::Boolean(b) => *b,
         Value::Nil => false,
         _ => true,
     }
@@ -346,4 +310,3 @@ fn is_equal(a: &Value, b: &Value) -> bool {
         _ => a == b,
     }
 }
-

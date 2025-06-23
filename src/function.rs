@@ -28,7 +28,7 @@ impl Display for LoxFunction {
 
 impl LoxCallable for LoxFunction {
     fn arity(&self) -> usize {
-        if let Statement::Function { params, body, .. } = &self.declaration {
+        if let Statement::Function { params,  .. } = &self.declaration {
             return params.len()
         }
         
@@ -36,7 +36,7 @@ impl LoxCallable for LoxFunction {
     }
 
     fn call(&self, interpreter: &mut Interpreter, arguments: Vec<Value>) -> Result<Value, RuntimeError> {
-        let mut env = Environment::with_parent(interpreter.global_env.clone());
+        let mut env = Environment::with_parent(Rc::clone(&interpreter.environment));
 
         if let Statement::Function { params, body, .. } = &self.declaration {
             for i in 0..params.len() {
