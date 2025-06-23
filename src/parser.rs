@@ -134,6 +134,10 @@ impl Parser {
             return self.for_statement();
         }
 
+        if self.match_types(&[TokenType::Return]) {
+            return self.return_statement();
+        }
+
         if self.match_types(&[TokenType::Print]) {
             return self.print_statement();
         }
@@ -146,6 +150,18 @@ impl Parser {
         self.consume(TokenType::Semicolon, "Expect ';' after value.")?;
 
         Ok(Statement::print(expr))
+    }
+
+    fn return_statement(&mut self) -> Result<Statement, ParseError> {
+        let keyword = self.previous().unwrap().clone();
+        let mut value: Expr = Expr::literal(Literal::Nil);
+
+        if !self.check(&TokenType::Semicolon) {
+            value = self.expression()?;
+        }
+
+        self.consume(TokenType::Semicolon, "Expect ';' after return value.")?;
+        Ok(Statement::r#return(keyword, value))
     }
 
     fn if_statement(&mut self) -> Result<Statement, ParseError> {

@@ -35,6 +35,11 @@ pub enum Statement {
         body: Vec<Statement>
     },
 
+    Return {
+        keyword: Token,
+        value: Expr
+    },
+
     Print {
         expr: Expr,
     }
@@ -65,6 +70,10 @@ impl Statement {
         Statement::Function { name, params, body }
     }
 
+    pub fn r#return(keyword: Token, value: Expr) -> Statement {
+        Statement::Return { keyword, value }
+    }
+    
     pub fn print(expr: Expr) -> Statement {
         Statement::Print { expr }
     }
@@ -78,6 +87,7 @@ impl fmt::Display for Statement {
             Statement::Print { expr } => write!(f, "{}", expr),
             Statement::While { condition, body } => write!(f, "while ({}) {}", condition, body),
             Statement::Function { name, params: _params, body: _body } => write!(f, "function {name}"),
+            Statement::Return { keyword, value } => write!(f, "ret {} {}", keyword, value),
 
             Statement::Block { statements } => {
                 write!(f, "{{ ")?;

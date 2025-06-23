@@ -45,9 +45,8 @@ impl LoxCallable for LoxFunction {
                     arguments.get(i).unwrap().clone()
                 );
             }
-
-            interpreter.execute_block(body, Rc::new(RefCell::new(env)))?;
-            return Ok(Value::Nil);
+            
+            return Ok(interpreter.execute_block(body, Rc::new(RefCell::new(env)))?.unwrap_or(Value::Nil));
         }
 
         panic!("A LoxFunction declaration statement must be a Statement::Function");

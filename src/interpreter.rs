@@ -3,7 +3,7 @@ use crate::expr::Expr;
 use crate::stmt::Statement;
 use crate::tokenizer::{Literal, Token, TokenType};
 use std::cell::RefCell;
-use std::fmt::{self, Display, Formatter};
+use std::fmt::{self, write, Debug, Display, Formatter};
 use std::rc::Rc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use crate::function::{self, LoxCallable, LoxFunction};
@@ -27,6 +27,24 @@ impl RuntimeError {
         RuntimeError { token, message }
     }
 }
+
+pub struct Return {
+    value: Value
+}
+
+impl Debug for Return {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "return {}", self.value)
+    }
+}
+
+impl Display for Return {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "return {}", self.value)
+    }
+}
+
+impl std::error::Error for Return {}
 
 #[derive(Clone)]
 pub enum Value {
@@ -101,7 +119,7 @@ impl Interpreter {
             Value::Callable(function::create_builtin("print", 1, | args | {
                 let value = args.get(0).unwrap();
                 println!("{}", value);
-                
+
                 Ok(Value::Nil)
             }))
         );
@@ -121,21 +139,24 @@ impl Interpreter {
         Ok(())
     }
 
-    fn run_single(&mut self, statement: &Statement) -> Result<(), RuntimeError> {
+    fn run_single(&mut self, statement: &Statement) -> Result<Option<Value>, RuntimeError> {
         match statement {
             Statement::Expression { expr } => {
                 self.eval(expr)?;
-            }
+                Ok(None)
+            },
 
             Statement::Variable { name, initializer } => {
                 let value = self.eval(initializer)?;
                 self.environment.borrow_mut().define(name.lexeme.clone(), value);
-            }
+                Ok(None)
+            },
 
             Statement::Block { statements } => {
                 let new_env = Rc::new(RefCell::new(Environment::with_parent(Rc::clone(&self.environment))));
                 self.execute_block(statements, new_env)?;
-            }
+                Ok(None)
+            },
 
             Statement::If {
                 condition,
@@ -143,21 +164,22 @@ impl Interpreter {
                 else_branch,
             } => {
                 if is_truthy(&self.eval(condition)?) {
-                    self.run_single(then_branch)?;
+                    self.run_single(then_branch)
                 } else if let Some(else_branch) = else_branch {
-                    self.run_single(else_branch)?;
+                    self.run_single(else_branch)
+                } else {
+                    Ok(None)
                 }
             }
 
             Statement::While { condition, body } => {
                 while is_truthy(&self.eval(condition)?) {
-                    self.run_single(body)?;
+                    if let Some(val) = self.run_single(body)? {
+                        return Ok(Some(val));
+                    }
                 }
-            }
-
-            Statement::Print { expr } => {
-                let val = self.eval(expr)?;
-                println!("{val}");
+                
+                Ok(None)
             }
 
             Statement::Function { name, params, body } => {
@@ -166,30 +188,58 @@ impl Interpreter {
                     params.clone(),
                     body.clone(),
                 ));
-                
+
                 self.environment
                     .borrow_mut()
                     .define(name.lexeme.clone(), Value::Callable(Rc::new(func)));
+                Ok(None)
             }
-        };
 
-        Ok(())
+            Statement::Return { value, .. } => {
+                let result = self.eval(value)?;
+                Ok(Some(result)) // return value from function
+            }
+
+            Statement::Print { expr } => {
+                let val = self.eval(expr)?;
+                println!("{val}");
+                Ok(None)
+            }
+        }
     }
 
-    pub fn execute_block(&mut self, statements: &[Statement], new_env: Rc<RefCell<Environment>>) -> Result<(), RuntimeError> {
+    // pub fn execute_block(&mut self, statements: &[Statement], new_env: Rc<RefCell<Environment>>) -> Result<(), RuntimeError> {
+    //     let previous = Rc::clone(&self.environment);
+    // 
+    //     self.environment = Rc::clone(&new_env);
+    // 
+    //     let result = (|| {
+    //         for statement in statements {
+    //             self.run_single(statement)?;
+    //         }
+    //         Ok(())
+    //     })();
+    // 
+    //     self.environment = previous;
+    // 
+    //     result
+    // }
+
+    pub fn execute_block(&mut self, statements: &[Statement], environment: Rc<RefCell<Environment>>) -> Result<Option<Value>, RuntimeError> {
         let previous = Rc::clone(&self.environment);
+        self.environment = Rc::clone(&environment);
 
-        self.environment = Rc::clone(&new_env);
+        let mut result = Ok(None);
 
-        let result = (|| {
-            for statement in statements {
-                self.run_single(statement)?;
+        for statement in statements {
+            let val = self.run_single(statement)?;
+            if val.is_some() {
+                result = Ok(val);
+                break;
             }
-            Ok(())
-        })();
+        }
 
         self.environment = previous;
-
         result
     }
 
@@ -228,18 +278,18 @@ impl Interpreter {
                     (Value::Float(l), Value::Float(r), TokenType::Minus) => Ok(Value::Float(l - r)),
                     (Value::Float(l), Value::Float(r), TokenType::Star) => Ok(Value::Float(l * r)),
                     (Value::Float(l), Value::Float(r), TokenType::Slash) => Ok(Value::Float(l / r)),
-                    
+
                     (Value::String(l), Value::String(r), TokenType::Plus) => Ok(Value::String(format!("{}{}", l, r))),
-                    
+
                     (Value::Float(l), Value::Float(r), TokenType::Greater) => Ok(Value::Boolean(l > r)),
                     (Value::Float(l), Value::Float(r), TokenType::GreaterEqual) => Ok(Value::Boolean(l >= r)),
-                    
+
                     (Value::Float(l), Value::Float(r), TokenType::Less) => Ok(Value::Boolean(l < r)),
                     (Value::Float(l), Value::Float(r), TokenType::LessEqual) => Ok(Value::Boolean(l <= r)),
-                    
+
                     (_, _, TokenType::EqualEqual) => Ok(Value::Boolean(is_equal(&left, &right))),
                     (_, _, TokenType::BangEqual) => Ok(Value::Boolean(!is_equal(&left, &right))),
-                    
+
                     _ => Err(RuntimeError::new(
                         operator.clone(),
                         "Binary operator not supported".to_string(),
