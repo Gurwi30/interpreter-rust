@@ -58,7 +58,7 @@ impl Display for Value {
             Value::Integer(i) => write!(f, "{i}"),
             Value::Float(fl) => write!(f, "{fl}"),
             Value::Boolean(b) => write!(f, "{b}"),
-            Value::Callable(c) => write!(f, "{c}"),
+            Value::Callable(c) => write!(f, "<fn {c}>"),
             Value::Nil => write!(f, "nil"),
         }
     }
