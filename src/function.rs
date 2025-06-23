@@ -2,20 +2,22 @@ use std::cell::RefCell;
 use std::fmt::{Display, Formatter};
 use std::rc::Rc;
 use crate::environment::Environment;
-use crate::interpreter::{Interpreter, RuntimeError, Value};
+use crate::interpreter::{ExecError, Interpreter, RuntimeError, Value};
 use crate::stmt::Statement;
+
+type CallResult = Result<Value, ExecError>;
 
 pub trait LoxCallable: Display {
 
     fn arity(&self) -> usize;
 
-    fn call(&self, interpreter: &mut Interpreter, arguments: Vec<Value>) -> Result<Value, RuntimeError>;
+    fn call(&self, interpreter: &mut Interpreter, arguments: Vec<Value>) -> CallResult;
 
 }
 
 pub struct LoxFunction {
     declaration: Statement,
-    closure: Rc<RefCell<Environment>>
+    pub(crate) closure: Rc<RefCell<Environment>>
 }
 
 impl Display for LoxFunction {
@@ -36,8 +38,10 @@ impl LoxCallable for LoxFunction {
         0
     }
 
-    fn call(&self, interpreter: &mut Interpreter, arguments: Vec<Value>) -> Result<Value, RuntimeError> {
+    fn call(&self, interpreter: &mut Interpreter, arguments: Vec<Value>) -> CallResult {
         let mut env = Environment::with_parent(Rc::clone(&self.closure));
+
+        //println!("Calling function with closure env keys: {:?}", self.closure.borrow().values.keys().collect::<Vec<_>>());
 
         if let Statement::Function { params, body, .. } = &self.declaration {
             for i in 0..params.len() {
@@ -47,7 +51,20 @@ impl LoxCallable for LoxFunction {
                 );
             }
 
-            return Ok(interpreter.execute_block(body, Rc::new(RefCell::new(env)))?.unwrap_or(Value::Nil));
+            return  match interpreter.execute_block(body, Rc::new(RefCell::new(env))) {
+                Err(ExecError::Runtime(e)) => Err(ExecError::Runtime(e)),
+                Err(ExecError::Return(e)) => Ok(e),
+                _ => Ok(Value::Nil)
+            }
+            
+            // match interpreter.execute_block(body, Rc::new(RefCell::new(env))? { 
+            //     ExecError::Runtime(e) => 
+            //     _ => {}
+            // }
+            // 
+            // return Ok(interpreter.execute_block(body, Rc::new(RefCell::new(env)))?.unwrap_or(Value::Nil));
+            
+            // return Ok(Value::Nil)
         }
 
         panic!("A LoxFunction declaration statement must be a Statement::Function");
@@ -66,7 +83,7 @@ impl LoxFunction {
 
 pub struct BuiltinFunction<F>
 where
-    F: Fn(Vec<Value>) -> Result<Value, RuntimeError> + 'static,
+    F: Fn(Vec<Value>) -> CallResult + 'static,
 {
     name: String,
     arity: usize,
@@ -75,7 +92,7 @@ where
 
 impl<F> Display for BuiltinFunction<F>
 where
-    F: 'static + Fn(Vec<Value>) -> Result<Value, RuntimeError>,
+    F: 'static + Fn(Vec<Value>) -> CallResult,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "<fn builtin {}>", self.name)
@@ -84,20 +101,20 @@ where
 
 impl<F> LoxCallable for BuiltinFunction<F>
 where
-    F: Fn(Vec<Value>) -> Result<Value, RuntimeError> + 'static,
+    F: Fn(Vec<Value>) -> CallResult + 'static,
 {
     fn arity(&self) -> usize {
         self.arity
     }
 
-    fn call(&self, _interpreter: &mut Interpreter, arguments: Vec<Value>) -> Result<Value, RuntimeError> {
+    fn call(&self, _interpreter: &mut Interpreter, arguments: Vec<Value>) -> CallResult {
         (self.func)(arguments)
     }
 }
 
 pub fn create_builtin<F>(name: &str, arity: usize, func: F) -> Rc<dyn LoxCallable>
 where
-    F: Fn(Vec<Value>) -> Result<Value, RuntimeError> + 'static,
+    F: Fn(Vec<Value>) -> CallResult + 'static,
 {
     Rc::new(BuiltinFunction {
         name: name.to_string(),

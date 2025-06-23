@@ -1,12 +1,14 @@
 use crate::environment::Environment;
 use crate::expr::Expr;
+use crate::function::{self, LoxCallable, LoxFunction};
 use crate::stmt::Statement;
 use crate::tokenizer::{Literal, Token, TokenType};
 use std::cell::RefCell;
-use std::fmt::{self, write, Debug, Display, Formatter};
+use std::fmt::{self, Debug, Display, Formatter};
 use std::rc::Rc;
 use std::time::{SystemTime, UNIX_EPOCH};
-use crate::function::{self, LoxCallable, LoxFunction};
+
+type ExecResult = Result<(), ExecError>;
 
 #[derive(Debug)]
 pub struct RuntimeError {
@@ -46,6 +48,21 @@ impl Display for Return {
 
 impl std::error::Error for Return {}
 
+#[derive(Debug)]
+pub enum ExecError {
+    Return(Value),
+    Runtime(RuntimeError),
+}
+
+impl Display for ExecError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match &self { 
+            ExecError::Return(v) => write!(f, "return {}", v),
+            ExecError::Runtime(e) => write!(f, "{e}")
+        }
+    }
+}
+
 #[derive(Clone)]
 pub enum Value {
     String(String),
@@ -54,6 +71,20 @@ pub enum Value {
     Boolean(bool),
     Callable(Rc<dyn LoxCallable>),
     Nil,
+}
+
+
+impl Debug for Value {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Value::String(s) => write!(f, "String({:?})", s),
+            Value::Integer(i) => write!(f, "Integer({})", i),
+            Value::Float(fl) => write!(f, "Float({})", fl),
+            Value::Boolean(b) => write!(f, "Boolean({})", b),
+            Value::Callable(_) => write!(f, "Callable(<fn>)"),
+            Value::Nil => write!(f, "Nil"),
+        }
+    }
 }
 
 impl PartialEq for Value {
@@ -133,54 +164,48 @@ impl Interpreter {
         }
     }
 
-    pub fn run(&mut self, statements: &[Statement]) -> Result<(), RuntimeError> {
+    pub fn run(&mut self, statements: &[Statement]) -> ExecResult {
         for statement in statements {
             self.run_single(statement)?;
         }
         Ok(())
     }
 
-    fn run_single(&mut self, statement: &Statement) -> Result<Option<Value>, RuntimeError> {
+    fn run_single(&mut self, statement: &Statement) -> ExecResult {
         match statement {
             Statement::Expression { expr } => {
                 self.eval(expr)?;
-                Ok(None)
+                Ok(())
             },
 
             Statement::Variable { name, initializer } => {
                 let value = self.eval(initializer)?;
                 self.environment.borrow_mut().define(name.lexeme.clone(), value);
-                Ok(None)
+                Ok(())
             },
 
             Statement::Block { statements } => {
                 let new_env = Rc::new(RefCell::new(Environment::with_parent(Rc::clone(&self.environment))));
                 self.execute_block(statements, new_env)?;
-                Ok(None)
+                Ok(())
             },
 
-            Statement::If {
-                condition,
-                then_branch,
-                else_branch,
-            } => {
+            Statement::If { condition, then_branch, else_branch } => {
                 if is_truthy(&self.eval(condition)?) {
                     self.run_single(then_branch)
                 } else if let Some(else_branch) = else_branch {
                     self.run_single(else_branch)
                 } else {
-                    Ok(None)
+                    Ok(())
                 }
             }
 
             Statement::While { condition, body } => {
                 while is_truthy(&self.eval(condition)?) {
-                    if let Some(val) = self.run_single(body)? {
-                        return Ok(Some(val));
-                    }
+                    self.run_single(body)?;
                 }
 
-                Ok(None)
+                Ok(())
             }
 
             Statement::Function { name, params, body } => {
@@ -189,62 +214,45 @@ impl Interpreter {
                     params.clone(),
                     body.clone(),
                 ), self.environment.clone());
-
+                
                 self.environment
                     .borrow_mut()
                     .define(name.lexeme.clone(), Value::Callable(Rc::new(func)));
-                Ok(None)
+
+                Ok(())
             }
 
             Statement::Return { value, .. } => {
                 let result = self.eval(value)?;
-                Ok(Some(result)) // return value from function
+                Err(ExecError::Return(result))
             }
 
             Statement::Print { expr } => {
                 let val = self.eval(expr)?;
                 println!("{val}");
-                Ok(None)
+                Ok(())
             }
         }
     }
 
-    // pub fn execute_block(&mut self, statements: &[Statement], new_env: Rc<RefCell<Environment>>) -> Result<(), RuntimeError> {
-    //     let previous = Rc::clone(&self.environment);
-    //
-    //     self.environment = Rc::clone(&new_env);
-    //
-    //     let result = (|| {
-    //         for statement in statements {
-    //             self.run_single(statement)?;
-    //         }
-    //         Ok(())
-    //     })();
-    //
-    //     self.environment = previous;
-    //
-    //     result
-    // }
-
-    pub fn execute_block(&mut self, statements: &[Statement], environment: Rc<RefCell<Environment>>) -> Result<Option<Value>, RuntimeError> {
+    pub fn execute_block(&mut self, statements: &[Statement], new_env: Rc<RefCell<Environment>>) -> ExecResult {
         let previous = Rc::clone(&self.environment);
-        self.environment = Rc::clone(&environment);
-
-        let mut result = Ok(None);
-
-        for statement in statements {
-            let val = self.run_single(statement)?;
-            if val.is_some() {
-                result = Ok(val);
-                break;
+    
+        self.environment = Rc::clone(&new_env);
+    
+        let result = (|| {
+            for statement in statements {
+                self.run_single(statement)?;
             }
-        }
-
+            Ok(())
+        })();
+    
         self.environment = previous;
+    
         result
     }
 
-    pub fn eval(&mut self, expr: &Expr) -> Result<Value, RuntimeError> {
+    pub fn eval(&mut self, expr: &Expr) -> Result<Value, ExecError> {
         match expr {
             Expr::Literal { literal } => Ok(Value::from_literal(literal)),
 
@@ -255,18 +263,18 @@ impl Interpreter {
                     TokenType::Minus => match right {
                         Value::Integer(i) => Ok(Value::Integer(-i)),
                         Value::Float(f) => Ok(Value::Float(-f)),
-                        _ => Err(RuntimeError::new(
+                        _ => Err(ExecError::Runtime(RuntimeError::new(
                             operator.clone(),
                             "Operand must be a number".to_string(),
-                        )),
+                        ))),
                     },
 
                     TokenType::Bang => Ok(Value::Boolean(!is_truthy(&right))),
 
-                    _ => Err(RuntimeError::new(
+                    _ => Err(ExecError::Runtime(RuntimeError::new(
                         operator.clone(),
                         "Unary operator not supported".to_string(),
-                    )),
+                    ))),
                 }
             }
 
@@ -291,9 +299,11 @@ impl Interpreter {
                     (_, _, TokenType::EqualEqual) => Ok(Value::Boolean(is_equal(&left, &right))),
                     (_, _, TokenType::BangEqual) => Ok(Value::Boolean(!is_equal(&left, &right))),
 
-                    _ => Err(RuntimeError::new(
-                        operator.clone(),
-                        "Binary operator not supported".to_string(),
+                    _ => Err(ExecError::Runtime(
+                        RuntimeError::new(
+                            operator.clone(),
+                            "Binary operator not supported".to_string(),
+                        )
                     )),
                 }
             }
@@ -334,21 +344,25 @@ impl Interpreter {
 
                 if let Value::Callable(callable) = value {
                     if args.len() != callable.arity() {
-                        return Err(RuntimeError::new(
-                            paren.clone(),
-                            format!(
-                                "Expected {} arguments but got {}.",
-                                callable.arity(),
-                                args.len()
-                            ),
+                        return Err(ExecError::Runtime(
+                            RuntimeError::new(
+                                paren.clone(),
+                                format!(
+                                    "Expected {} arguments but got {}.",
+                                    callable.arity(),
+                                    args.len()
+                                ),
+                            )
                         ));
                     }
 
                     callable.call(self, args)
                 } else {
-                    Err(RuntimeError::new(
-                        paren.clone(),
-                        "Can only call functions and classes.".to_string(),
+                    Err(ExecError::Runtime(
+                        RuntimeError::new(
+                            paren.clone(),
+                            "Can only call functions and classes.".to_string(),
+                        )
                     ))
                 }
             }
