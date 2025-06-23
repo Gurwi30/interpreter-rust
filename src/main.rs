@@ -6,6 +6,7 @@ mod interpreter;
 mod stmt;
 mod environment;
 mod function;
+mod resolver;
 
 use crate::interpreter::Interpreter;
 use crate::parser::Parser;
@@ -14,6 +15,7 @@ use std::env;
 use std::fs;
 use std::io::{self, Write};
 use std::process::exit;
+use crate::resolver::Resolver;
 
 fn main() {
      let args: Vec<String> = env::args().collect();
@@ -110,7 +112,12 @@ fn run(file_contents: &String) {
 
     match parse_res {
         Ok(statements) => {
-            if let Err(err) = Interpreter::new().run(&statements) {
+            let mut interpreter = Interpreter::new();
+            let mut resolver = Resolver::new(&mut interpreter);
+            
+            resolver.resolve(&statements);
+
+            if let Err(err) = interpreter.run(&statements) {
                 eprintln!("{err}");
                 exit(70);
             }

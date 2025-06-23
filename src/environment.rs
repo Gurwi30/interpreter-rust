@@ -30,6 +30,24 @@ impl Environment {
         self.values.insert(name, value);
     }
 
+    pub fn get_at(&self, distance: usize, name: &String) -> Option<Value> {
+        Some(self.ancestor(distance).borrow().values.get(name)?.clone())
+    }
+
+    pub fn ancestor(&self, distance: usize) -> Rc<RefCell<Environment>> {
+        let mut env = Rc::new(RefCell::new(self.clone())); // If self is not Rc already, better approach below
+
+        for _ in 0..distance {
+            let enclosing_env = {
+                let env_borrow = env.borrow();
+                env_borrow.enclosing.as_ref().expect("No enclosing environment").clone()
+            };
+
+            env = enclosing_env;
+        }
+        env
+    }
+
     pub fn assign(&mut self, name: Token, value: Value) -> Result<(), ExecError> {
         if self.values.contains_key(&name.lexeme) {
             self.values.insert(name.lexeme, value);
@@ -43,6 +61,10 @@ impl Environment {
         Err(ExecError::Runtime(
             RuntimeError::new(name.clone(), format!("Undefined variable '{}'.", name.lexeme))
         ))
+    }
+
+    pub fn assign_at(&self, distance: usize, name: &Token, value: &Value) {
+        self.ancestor(distance).borrow_mut().values.insert(name.lexeme.clone(), value.clone());
     }
 
     pub fn get(&self, name: &Token) -> Result<Value, ExecError> {
@@ -67,5 +89,5 @@ impl Environment {
             parent.borrow().debug_print(depth + 1);
         }
     }
-    
+
 }

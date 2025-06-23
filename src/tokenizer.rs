@@ -1,6 +1,7 @@
 use std::cmp::PartialEq;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter };
+use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 use lazy_static::lazy_static;
 use crate::lox;
@@ -26,7 +27,7 @@ lazy_static! {
     ]);
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum TokenType {
     LeftParen,
     RightParen,
@@ -164,7 +165,7 @@ impl FromStr for TokenType {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Hash, Eq)]
 pub struct Token {
     pub token_type: TokenType,
     pub lexeme: String,
@@ -190,6 +191,23 @@ pub enum Literal {
     Boolean(bool),
     Nil
 }
+
+impl Hash for Literal {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        use Literal::*;
+        std::mem::discriminant(self).hash(state);
+
+        match self {
+            String(s) => s.hash(state),
+            Integer(i) => i.hash(state),
+            Float(f) => f.to_bits().hash(state),
+            Boolean(b) => b.hash(state),
+            Nil => {}
+        }
+    }
+}
+
+impl Eq for Literal { }
 
 impl Display for Literal {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {

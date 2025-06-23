@@ -4,6 +4,7 @@ use crate::function::{self, LoxCallable, LoxFunction};
 use crate::stmt::Statement;
 use crate::tokenizer::{Literal, Token, TokenType};
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::fmt::{self, Debug, Display, Formatter};
 use std::rc::Rc;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -56,7 +57,7 @@ pub enum ExecError {
 
 impl Display for ExecError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match &self { 
+        match &self {
             ExecError::Return(v) => write!(f, "return {}", v),
             ExecError::Runtime(e) => write!(f, "{e}")
         }
@@ -128,7 +129,8 @@ impl Value {
 #[derive(Clone, PartialEq)]
 pub struct Interpreter {
     pub globals: Rc<RefCell<Environment>>,
-    pub environment: Rc<RefCell<Environment>>
+    pub environment: Rc<RefCell<Environment>>,
+    pub locals: HashMap<Expr, usize>
 }
 
 impl Interpreter {
@@ -161,6 +163,7 @@ impl Interpreter {
         Interpreter {
             globals: Rc::clone(&globals_rc),
             environment: globals_rc,
+            locals: HashMap::new()
         }
     }
 
@@ -169,6 +172,10 @@ impl Interpreter {
             self.run_single(statement)?;
         }
         Ok(())
+    }
+
+    pub fn resolve(&mut self, expr: &Expr, depth: usize) {
+        self.locals.insert(expr.clone(), depth);
     }
 
     fn run_single(&mut self, statement: &Statement) -> ExecResult {
@@ -313,10 +320,18 @@ impl Interpreter {
             Expr::Variable { name } => self.environment.borrow().get(name),
 
             Expr::Assign { name, value } => {
+                // let value = self.eval(value)?;
+                // self.environment.borrow_mut().assign(name.clone(), value.clone())?;
+                // Ok(value)
                 let value = self.eval(value)?;
-                self.environment.borrow_mut().assign(name.clone(), value.clone())?;
+
+                match self.locals.get(expr) {
+                    Some(distance) => self.environment.borrow_mut().assign_at(*distance, name, &value),
+                    None => self.globals.borrow_mut().assign(name.clone(), value.clone())?,
+                }
+                
                 Ok(value)
-            }
+             }
 
             Expr::Logical { left, operator, right } => {
                 let left = self.eval(left)?;
@@ -366,6 +381,18 @@ impl Interpreter {
                     ))
                 }
             }
+        }
+    }
+
+    fn look_up_var(&self, name: &Token, expr: &Expr) -> Result<Value, ExecError> {
+        match self.locals.get(expr) {
+            Some(distance) => match self.environment.borrow().get_at(*distance, &name.lexeme.clone()) {
+                Some(val) => Ok(val),
+                None => Err(ExecError::Runtime(
+                    RuntimeError::new(name.clone(), "Variable not found".to_string()))
+                ),
+            },
+            None => self.globals.borrow().get(name)
         }
     }
 }
