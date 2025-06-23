@@ -15,6 +15,7 @@ pub trait LoxCallable: Display {
 
 pub struct LoxFunction {
     declaration: Statement,
+    closure: Rc<RefCell<Environment>>
 }
 
 impl Display for LoxFunction {
@@ -36,7 +37,7 @@ impl LoxCallable for LoxFunction {
     }
 
     fn call(&self, interpreter: &mut Interpreter, arguments: Vec<Value>) -> Result<Value, RuntimeError> {
-        let mut env = Environment::with_parent(Rc::clone(&interpreter.environment));
+        let mut env = Environment::with_parent(Rc::clone(&self.closure));
 
         if let Statement::Function { params, body, .. } = &self.declaration {
             for i in 0..params.len() {
@@ -45,7 +46,7 @@ impl LoxCallable for LoxFunction {
                     arguments.get(i).unwrap().clone()
                 );
             }
-            
+
             return Ok(interpreter.execute_block(body, Rc::new(RefCell::new(env)))?.unwrap_or(Value::Nil));
         }
 
@@ -54,9 +55,9 @@ impl LoxCallable for LoxFunction {
 }
 
 impl LoxFunction {
-    pub fn new(declaration: Statement) -> LoxFunction {
+    pub fn new(declaration: Statement, closure: Rc<RefCell<Environment>>) -> LoxFunction {
         if let Statement::Function { .. } = &declaration {
-            LoxFunction { declaration }
+            LoxFunction { declaration, closure }
         } else {
             panic!("A LoxFunction declaration statement must be a Statement::Function");
         }

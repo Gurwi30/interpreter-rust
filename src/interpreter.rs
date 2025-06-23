@@ -110,6 +110,7 @@ impl Interpreter {
                 let start = SystemTime::now();
                 let since_epoch = start.duration_since(UNIX_EPOCH)
                     .expect("Time went backwards");
+
                 Ok(Value::Float(since_epoch.as_secs() as f64))
             }))
         );
@@ -178,7 +179,7 @@ impl Interpreter {
                         return Ok(Some(val));
                     }
                 }
-                
+
                 Ok(None)
             }
 
@@ -187,7 +188,7 @@ impl Interpreter {
                     name.clone(),
                     params.clone(),
                     body.clone(),
-                ));
+                ), self.environment.clone());
 
                 self.environment
                     .borrow_mut()
@@ -210,18 +211,18 @@ impl Interpreter {
 
     // pub fn execute_block(&mut self, statements: &[Statement], new_env: Rc<RefCell<Environment>>) -> Result<(), RuntimeError> {
     //     let previous = Rc::clone(&self.environment);
-    // 
+    //
     //     self.environment = Rc::clone(&new_env);
-    // 
+    //
     //     let result = (|| {
     //         for statement in statements {
     //             self.run_single(statement)?;
     //         }
     //         Ok(())
     //     })();
-    // 
+    //
     //     self.environment = previous;
-    // 
+    //
     //     result
     // }
 
