@@ -317,7 +317,7 @@ impl Interpreter {
 
             Expr::Grouping { expr } => self.eval(expr),
 
-            Expr::Variable { name } => self.environment.borrow().get(name),
+            Expr::Variable { name } => self.look_up_var(name, expr), //self.environment.borrow().get(name),
 
             Expr::Assign { name, value } => {
                 // let value = self.eval(value)?;
@@ -329,7 +329,7 @@ impl Interpreter {
                     Some(distance) => self.environment.borrow_mut().assign_at(*distance, name, &value),
                     None => self.globals.borrow_mut().assign(name.clone(), value.clone())?,
                 }
-                
+
                 Ok(value)
              }
 
