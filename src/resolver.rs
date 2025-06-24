@@ -103,18 +103,17 @@ impl<'a> Resolver<'a> {
             },
 
             Statement::Variable { name, initializer } => {
+                self.declare(name)?;
+
                 if let Expr::Literal { literal } = initializer {
-                    if let Literal::Nil = literal {
-                        return Ok(())
-                    } else {
+                    if let Literal::Nil = literal { } else {
                         self.resolve_expr(initializer)?;
                     }
-
-                    self.define(name);
-                    
-                    return Ok(());
+                } else {
+                    self.resolve_expr(initializer)?;
                 }
-                
+
+                self.define(name);
                 Ok(())
             },
 
