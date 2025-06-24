@@ -208,8 +208,15 @@ impl Interpreter {
             }
 
             Statement::While { condition, body } => {
+                let mut counter: usize = 0;
+                
                 while is_truthy(&self.eval(condition)?) {
+                    if counter >= 10 {
+                        break;
+                    }
+                    
                     self.run_single(body)?;
+                    counter += 1;
                 }
 
                 Ok(())
