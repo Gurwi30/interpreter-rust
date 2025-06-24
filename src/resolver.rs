@@ -172,9 +172,11 @@ impl<'a> Resolver<'a> {
     fn resolve_expr(&mut self, expr: &Expr) -> ResolveResult {
         match expr {
             Expr::Variable { name } => {
-                if !self.scopes.is_empty() && !self.scopes.last().unwrap().get(name.lexeme.as_str()).map_or(false, |v| *v) {
-                    lox::error(name, "Can't read local variable in its own initializer.");
-                    return Err(ResolveError::Other("Can't read local variable in its own initializer.".into()))
+                if !self.scopes.is_empty() {
+                    if let Some(false) = self.scopes.last().unwrap().get(name.lexeme.as_str()) {
+                        lox::error(name, "Can't read local variable in its own initializer.");
+                        return Err(ResolveError::Other("Can't read local variable in its own initializer.".into()));
+                    }
                 }
 
                 self.resolve_local(expr, name);
