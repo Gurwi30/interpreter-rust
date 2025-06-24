@@ -1,9 +1,9 @@
+use crate::environment::Environment;
+use crate::interpreter::{ExecError, Interpreter, Value};
+use crate::stmt::Statement;
 use std::cell::RefCell;
 use std::fmt::{Display, Formatter};
 use std::rc::Rc;
-use crate::environment::Environment;
-use crate::interpreter::{ExecError, Interpreter, RuntimeError, Value};
-use crate::stmt::Statement;
 
 type CallResult = Result<Value, ExecError>;
 

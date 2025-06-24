@@ -28,7 +28,6 @@ impl Environment {
     }
 
     pub fn define(&mut self, name: String, value: Value) {
-        println!("Defining variable: {}", name);
         self.values.insert(name, value);
     }
 
@@ -45,8 +44,6 @@ impl Environment {
             .borrow_mut()
             .values
             .insert(name.lexeme.clone(), value.clone());
-
-        println!("[assign_at] '{}' set to {:?} at depth {}", name.lexeme, value, distance);
     }
 
     pub fn ancestor(env: Rc<RefCell<Environment>>, distance: usize) -> Rc<RefCell<Environment>> {
@@ -58,8 +55,7 @@ impl Environment {
             };
             current_env = next;
         }
-
-        println!("[ancestor] {:?}", current_env.borrow().values);
+        
         current_env
     }
 
@@ -93,13 +89,5 @@ impl Environment {
             format!("Undefined variable '{}'.", name.lexeme),
         )))
     }
-
-    pub fn debug_print(&self, depth: usize) {
-        let indent = "  ".repeat(depth);
-        println!("{}Environment at depth {}: {:?}", indent, depth, self.values);
-
-        if let Some(ref parent) = self.enclosing {
-            parent.borrow().debug_print(depth + 1);
-        }
-    }
+    
 }
