@@ -115,7 +115,10 @@ fn run(file_contents: &String) {
             let mut interpreter = Interpreter::new();
             let mut resolver = Resolver::new(&mut interpreter);
             
-            resolver.resolve(&statements);
+            match resolver.resolve(&statements) {
+                Err(_) => exit(70),
+                _ => {}
+            }
 
             if let Err(err) = interpreter.run(&statements) {
                 eprintln!("{err}");
