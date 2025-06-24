@@ -211,7 +211,7 @@ impl Interpreter {
                 let mut counter: usize = 0;
 
                 while is_truthy(&self.eval(condition)?) {
-                    if counter >= 50 {
+                    if counter >= 100 {
                         break;
                     }
 
