@@ -16,7 +16,7 @@ pub enum ResolveError {
 
 impl Display for ResolveError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match &self { 
+        match &self {
             ResolveError::VariableAlreadyDeclared(name) => write!(f, "Variable already declared {}", name),
             ResolveError::Other(e) => write!(f, "Other error: {}", e),
         }
