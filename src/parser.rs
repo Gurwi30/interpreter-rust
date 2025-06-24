@@ -207,16 +207,7 @@ impl Parser {
 
         self.consume(TokenType::Semicolon, "Expect ';' after loop condition.")?;
 
-        // let increment = if !self.check(&TokenType::RightParen) {
-        //     Some(self.expression()?)
-        // } else {
-        //     None
-        // };
-
         let increment = if !self.check(&TokenType::RightParen) {
-            if self.match_types(&[TokenType::Var]) {
-                return Err(error(self.previous().unwrap(), "Can't use variable declarations in 'for' loop increment."));
-            }
             Some(self.expression()?)
         } else {
             None
@@ -230,18 +221,22 @@ impl Parser {
             }
         }
 
-        let mut body = self.statement()?;
+        let stmt = self.statement()?;
+        let mut body = match stmt {
+            Statement::Block { .. } => stmt,
+            _ => Statement::block(vec![stmt]),
+        };
 
+        // Always wrap in block if increment is present
         if let Some(inc) = increment {
-            body = Statement::block(vec![
-                body,
-                Statement::expression(inc),
-            ]);
+            body = Statement::block(vec![body, Statement::expression(inc)]);
         }
 
+        // Wrap condition
         let condition = condition.unwrap_or(Expr::literal(Literal::Boolean(true)));
         body = Statement::r#while(condition, body);
 
+        // ALWAYS wrap final loop in a block if initializer is present
         if let Some(init) = initializer {
             body = Statement::block(vec![init, body]);
         }
