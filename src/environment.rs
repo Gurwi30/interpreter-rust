@@ -89,5 +89,14 @@ impl Environment {
             format!("Undefined variable '{}'.", name.lexeme),
         )))
     }
+
+    pub fn debug_print(&self, depth: usize) {
+        let indent = "  ".repeat(depth);
+        println!("{}Environment at depth {}: {:?}", indent, depth, self.values);
+
+        if let Some(parent) = &self.enclosing {
+            parent.borrow().debug_print(depth + 1);
+        }
+    }
     
 }

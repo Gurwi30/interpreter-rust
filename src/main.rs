@@ -8,6 +8,7 @@ mod environment;
 mod function;
 mod resolver;
 
+use std::cell::{Ref, RefCell};
 use crate::interpreter::Interpreter;
 use crate::parser::Parser;
 use crate::tokenizer::{Token, Tokenizer};
@@ -15,6 +16,7 @@ use std::env;
 use std::fs;
 use std::io::{self, Write};
 use std::process::exit;
+use std::rc::Rc;
 use crate::resolver::Resolver;
 
 fn main() {
@@ -112,20 +114,21 @@ fn run(file_contents: &String) {
 
     match parse_res {
         Ok(statements) => {
-            let mut interpreter = Interpreter::new();
-            let mut resolver = Resolver::new(&mut interpreter);
-            
+            let interpreter = Rc::new(RefCell::new(Interpreter::new()));
+
+            // Pass the Rc<RefCell<>> to resolver instead of trying to get a mutable reference
+            let mut resolver = Resolver::new(interpreter.clone());
+
             match resolver.resolve(&statements) {
                 Err(_) => exit(70),
                 _ => {}
-            }
+            };
 
-            if let Err(err) = interpreter.run(&statements) {
+            if let Err(err) = interpreter.borrow_mut().run(&statements) {
                 eprintln!("{err}");
                 exit(70);
-            }
+            };
         },
-
         Err(err) => {
             eprintln!("{err}");
             exit(65)

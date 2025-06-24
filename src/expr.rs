@@ -1,7 +1,7 @@
 use crate::tokenizer::{Literal, Token};
 use std::fmt::{Display, Formatter};
 
-#[derive(PartialEq, Eq, Clone, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub enum Expr {
     Literal {
         literal: Literal,

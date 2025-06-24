@@ -212,9 +212,9 @@ impl Parser {
         } else {
             None
         };
-        
+
         self.consume(TokenType::RightParen, "Expect ')' after for clauses.")?;
-        
+
         let mut body = self.statement()?;
 
         if let Some(inc) = increment {

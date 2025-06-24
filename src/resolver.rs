@@ -1,5 +1,7 @@
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
+use std::rc::Rc;
 use crate::expr::Expr;
 use crate::interpreter::Interpreter;
 use crate::lox;
@@ -29,22 +31,26 @@ pub enum FunctionType {
     Function
 }
 
-pub struct  Resolver<'a> {
-    interpreter: &'a mut Interpreter,
+pub struct Resolver {
+    interpreter: Rc<RefCell<Interpreter>>,
     scopes: Vec<Scope>,
     current_function: FunctionType,
 }
 
-impl<'a> Resolver<'a> {
-    pub fn new(interpreter: &'a mut Interpreter) -> Self {
-        Resolver { interpreter, scopes: Vec::new(), current_function: FunctionType::None }
+impl Resolver {
+    pub fn new(interpreter: Rc<RefCell<Interpreter>>) -> Self {
+        Resolver {
+            interpreter,
+            scopes: Vec::new(),
+            current_function: FunctionType::None
+        }
     }
 
     pub fn resolve(&mut self, statements: &Vec<Statement>) -> ResolveResult {
-         for statement in statements {
-             self.resolve_stmt(statement)?;
-         }
-        
+        for statement in statements {
+            self.resolve_stmt(statement)?;
+        }
+
         Ok(())
     }
 
@@ -86,8 +92,9 @@ impl<'a> Resolver<'a> {
             if !self.scopes.get(i).unwrap().contains_key(name.lexeme.as_str()) {
                 continue;
             }
-    
-            self.interpreter.resolve(expr, &self.scopes.len() - 1 - i);
+
+            // Use borrow_mut() to access the interpreter
+            self.interpreter.borrow_mut().resolve(expr, self.scopes.len() - 1 - i);
             return;
         }
     }
@@ -98,7 +105,7 @@ impl<'a> Resolver<'a> {
                 self.begin_scope();
                 self.resolve(statements)?;
                 self.end_scope();
-                
+
                 Ok(())
             },
 
@@ -109,11 +116,10 @@ impl<'a> Resolver<'a> {
                     if let Literal::Nil = literal { } else {
                         self.resolve_expr(initializer)?;
                     }
-                } else {
-                    self.resolve_expr(initializer)?;
                 }
 
                 self.define(name);
+
                 Ok(())
             },
 
@@ -122,13 +128,13 @@ impl<'a> Resolver<'a> {
                 self.define(name);
 
                 self.resolve_func(statement, FunctionType::Function)?;
-                
+
                 Ok(())
             },
 
             Statement::Expression { expr } => {
                 self.resolve_expr(expr)?;
-                
+
                 Ok(())
             },
 
