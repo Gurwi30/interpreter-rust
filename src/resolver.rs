@@ -90,8 +90,6 @@ impl<'a> Resolver<'a> {
             self.interpreter.resolve(expr, &self.scopes.len() - 1 - i);
             return;
         }
-    
-        println!("Variable '{}' assumed global", name.lexeme);
     }
 
     fn resolve_stmt(&mut self, statement: &Statement) -> ResolveResult {
