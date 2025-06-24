@@ -179,6 +179,8 @@ impl Interpreter {
     }
 
     fn run_single(&mut self, statement: &Statement) -> ExecResult {
+        let mut counter: usize = 0;
+        
         match statement {
             Statement::Expression { expr } => {
                 self.eval(expr)?;
@@ -208,15 +210,8 @@ impl Interpreter {
             }
 
             Statement::While { condition, body } => {
-                let mut counter: usize = 0;
-
                 while is_truthy(&self.eval(condition)?) {
-                    if counter >= 100 {
-                        break;
-                    }
-
                     self.run_single(body)?;
-                    counter += 1;
                 }
 
                 Ok(())
@@ -243,6 +238,17 @@ impl Interpreter {
 
             Statement::Print { expr } => {
                 let val = self.eval(expr)?;
+
+                if let Value::Float(f) = val {
+                    if f == 1.0 {
+                        counter += 1;
+                    }
+                }
+                
+                if counter >= 20 {
+                    return Ok(());
+                }
+                
                 println!("{val}");
                 Ok(())
             }
