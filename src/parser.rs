@@ -207,12 +207,21 @@ impl Parser {
 
         self.consume(TokenType::Semicolon, "Expect ';' after loop condition.")?;
 
+        // let increment = if !self.check(&TokenType::RightParen) {
+        //     Some(self.expression()?)
+        // } else {
+        //     None
+        // };
+
         let increment = if !self.check(&TokenType::RightParen) {
+            if self.match_types(&[TokenType::Var]) {
+                return Err(error(self.previous().unwrap(), "Can't use variable declarations in 'for' loop increment."));
+            }
             Some(self.expression()?)
         } else {
             None
         };
-
+        
         self.consume(TokenType::RightParen, "Expect ')' after for clauses.")?;
 
         if let Some(token) = self.peek() {

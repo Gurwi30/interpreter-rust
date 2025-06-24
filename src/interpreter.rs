@@ -130,8 +130,7 @@ impl Value {
 pub struct Interpreter {
     pub globals: Rc<RefCell<Environment>>,
     pub environment: Rc<RefCell<Environment>>,
-    pub locals: HashMap<Expr, usize>,
-    counter: usize
+    pub locals: HashMap<Expr, usize>
 }
 
 impl Interpreter {
@@ -164,8 +163,7 @@ impl Interpreter {
         Interpreter {
             globals: Rc::clone(&globals_rc),
             environment: globals_rc,
-            locals: HashMap::new(),
-            counter: 0
+            locals: HashMap::new()
         }
     }
 
@@ -238,20 +236,9 @@ impl Interpreter {
 
             Statement::Print { expr } => {
                 let val = self.eval(expr)?;
-
-                if let Value::Float(f) = val {
-                    if f == 1.0 {
-                        self.counter += 1;
-                    }
-                }
-
-                if self.counter >= 20 {
-                    return Ok(());
-                }
-
                 println!("{val}");
+                
                 Ok(())
-
             }
         }
     }
