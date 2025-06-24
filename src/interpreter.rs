@@ -130,7 +130,8 @@ impl Value {
 pub struct Interpreter {
     pub globals: Rc<RefCell<Environment>>,
     pub environment: Rc<RefCell<Environment>>,
-    pub locals: HashMap<Expr, usize>
+    pub locals: HashMap<Expr, usize>,
+    counter: usize
 }
 
 impl Interpreter {
@@ -163,7 +164,8 @@ impl Interpreter {
         Interpreter {
             globals: Rc::clone(&globals_rc),
             environment: globals_rc,
-            locals: HashMap::new()
+            locals: HashMap::new(),
+            counter: 0
         }
     }
 
@@ -179,8 +181,6 @@ impl Interpreter {
     }
 
     fn run_single(&mut self, statement: &Statement) -> ExecResult {
-        let mut counter: usize = 0;
-        
         match statement {
             Statement::Expression { expr } => {
                 self.eval(expr)?;
@@ -241,16 +241,17 @@ impl Interpreter {
 
                 if let Value::Float(f) = val {
                     if f == 1.0 {
-                        counter += 1;
+                        self.counter += 1;
                     }
                 }
-                
-                if counter >= 20 {
+
+                if self.counter >= 20 {
                     return Ok(());
                 }
-                
+
                 println!("{val}");
                 Ok(())
+
             }
         }
     }
