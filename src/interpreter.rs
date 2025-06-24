@@ -237,7 +237,6 @@ impl Interpreter {
             Statement::Print { expr } => {
                 let val = self.eval(expr)?;
                 println!("{val}");
-                
                 Ok(())
             }
         }
@@ -289,7 +288,7 @@ impl Interpreter {
             Expr::Binary { left, operator, right } => {
                 let left = self.eval(left)?;
                 let right = self.eval(right)?;
-
+                
                 match (&left, &right, &operator.token_type) {
                     (Value::Float(l), Value::Float(r), TokenType::Plus) => Ok(Value::Float(l + r)),
                     (Value::Float(l), Value::Float(r), TokenType::Minus) => Ok(Value::Float(l - r)),
@@ -318,20 +317,21 @@ impl Interpreter {
 
             Expr::Grouping { expr } => self.eval(expr),
 
-            Expr::Variable { name } => self.look_up_var(name, expr), //self.environment.borrow().get(name),
+            Expr::Variable { name } => {
+                self.look_up_var(name, expr)
+            },
 
             Expr::Assign { name, value } => {
-                // let value = self.eval(value)?;
-                // self.environment.borrow_mut().assign(name.clone(), value.clone())?;
-                // Ok(value)
-                let value = self.eval(value)?;
+                let res = self.eval(value)?;
 
                 match self.locals.get(expr) {
-                    Some(distance) => self.environment.borrow_mut().assign_at(*distance, name, &value),
-                    None => self.globals.borrow_mut().assign(name.clone(), value.clone())?,
+                    Some(distance) => {
+                        Environment::assign_at(self.environment.clone(), *distance, name, &res);
+                    }
+                    None => self.globals.borrow_mut().assign(name.clone(), res.clone())?,
                 }
 
-                Ok(value)
+                Ok(res)
              }
 
             Expr::Logical { left, operator, right } => {
@@ -387,7 +387,7 @@ impl Interpreter {
 
     fn look_up_var(&self, name: &Token, expr: &Expr) -> Result<Value, ExecError> {
         match self.locals.get(expr) {
-            Some(distance) => match self.environment.borrow().get_at(*distance, &name.lexeme.clone()) {
+            Some(distance) => match Environment::get_at(self.environment.clone(), *distance, &name.lexeme.clone()) {
                 Some(val) => Ok(val),
                 None => Err(ExecError::Runtime(
                     RuntimeError::new(name.clone(), "Variable not found".to_string()))

@@ -214,29 +214,19 @@ impl Parser {
         };
         
         self.consume(TokenType::RightParen, "Expect ')' after for clauses.")?;
+        
+        let mut body = self.statement()?;
 
-        if let Some(token) = self.peek() {
-            if token.token_type == TokenType::Var {
-                return Err(error(token, "Expect expression."));
-            }
-        }
-
-        let stmt = self.statement()?;
-        let mut body = match stmt {
-            Statement::Block { .. } => stmt,
-            _ => Statement::block(vec![stmt]),
-        };
-
-        // Always wrap in block if increment is present
         if let Some(inc) = increment {
-            body = Statement::block(vec![body, Statement::expression(inc)]);
+            body = Statement::block(vec![
+                body,
+                Statement::expression(inc),
+            ]);
         }
 
-        // Wrap condition
         let condition = condition.unwrap_or(Expr::literal(Literal::Boolean(true)));
         body = Statement::r#while(condition, body);
 
-        // ALWAYS wrap final loop in a block if initializer is present
         if let Some(init) = initializer {
             body = Statement::block(vec![init, body]);
         }

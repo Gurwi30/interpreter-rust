@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
+
 use crate::interpreter::{ExecError, RuntimeError, Value};
 use crate::tokenizer::Token;
 
@@ -27,44 +28,55 @@ impl Environment {
     }
 
     pub fn define(&mut self, name: String, value: Value) {
+        println!("Defining variable: {}", name);
         self.values.insert(name, value);
     }
 
-    pub fn get_at(&self, distance: usize, name: &String) -> Option<Value> {
-        Some(self.ancestor(distance).borrow().values.get(name)?.clone())
+    pub fn get_at(env: Rc<RefCell<Environment>>, distance: usize, name: &str) -> Option<Value> {
+        Environment::ancestor(env, distance)
+            .borrow()
+            .values
+            .get(name)
+            .cloned()
     }
 
-    pub fn ancestor(&self, distance: usize) -> Rc<RefCell<Environment>> {
-        let mut env = Rc::new(RefCell::new(self.clone())); // If self is not Rc already, better approach below
+    pub fn assign_at(env: Rc<RefCell<Environment>>, distance: usize, name: &Token, value: &Value) {
+        Environment::ancestor(env, distance)
+            .borrow_mut()
+            .values
+            .insert(name.lexeme.clone(), value.clone());
 
+        println!("[assign_at] '{}' set to {:?} at depth {}", name.lexeme, value, distance);
+    }
+
+    pub fn ancestor(env: Rc<RefCell<Environment>>, distance: usize) -> Rc<RefCell<Environment>> {
+        let mut current_env = env;
         for _ in 0..distance {
-            let enclosing_env = {
-                let env_borrow = env.borrow();
-                env_borrow.enclosing.as_ref().expect("No enclosing environment").clone()
+            let next = {
+                let borrow = current_env.borrow();
+                borrow.enclosing.clone().expect("No enclosing environment")
             };
-
-            env = enclosing_env;
+            current_env = next;
         }
-        env
+
+        println!("[ancestor] {:?}", current_env.borrow().values);
+        current_env
     }
 
     pub fn assign(&mut self, name: Token, value: Value) -> Result<(), ExecError> {
         if self.values.contains_key(&name.lexeme) {
-            self.values.insert(name.lexeme, value);
-            return Ok(())
+            self.values.insert(name.lexeme.clone(), value);
+            return Ok(());
         }
-        
-        if let Some(ref enclosing) = self.enclosing {
-            return enclosing.borrow_mut().assign(name, value)
-        }
-        
-        Err(ExecError::Runtime(
-            RuntimeError::new(name.clone(), format!("Undefined variable '{}'.", name.lexeme))
-        ))
-    }
 
-    pub fn assign_at(&self, distance: usize, name: &Token, value: &Value) {
-        self.ancestor(distance).borrow_mut().values.insert(name.lexeme.clone(), value.clone());
+        if let Some(ref enclosing) = self.enclosing {
+            return enclosing.borrow_mut().assign(name, value);
+        }
+
+        Err(ExecError::Runtime(RuntimeError::new(
+            name.clone(),
+            format!("Undefined variable '{}'.", name.lexeme),
+        )))
     }
 
     pub fn get(&self, name: &Token) -> Result<Value, ExecError> {
@@ -76,18 +88,18 @@ impl Environment {
             return enclosing.borrow().get(name);
         }
 
-        Err(ExecError::Runtime(
-            RuntimeError::new(name.clone(), format!("Undefined variable '{}'.", name.lexeme))
-        ))
+        Err(ExecError::Runtime(RuntimeError::new(
+            name.clone(),
+            format!("Undefined variable '{}'.", name.lexeme),
+        )))
     }
 
     pub fn debug_print(&self, depth: usize) {
         let indent = "  ".repeat(depth);
-        println!("{}Environment at depth {}: {:?}", indent, depth, self.values.keys());
+        println!("{}Environment at depth {}: {:?}", indent, depth, self.values);
 
         if let Some(ref parent) = self.enclosing {
             parent.borrow().debug_print(depth + 1);
         }
     }
-
 }
