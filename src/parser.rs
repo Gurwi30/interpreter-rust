@@ -118,20 +118,20 @@ impl Parser {
     }
 
     fn statement(&mut self) -> Result<Statement, ParseError> {
-        if self.match_types(&[TokenType::LeftBrace]) {
-            return Ok(Statement::block(self.block()?))
+        if self.match_types(&[TokenType::For]) {
+            return self.for_statement();
         }
 
         if self.match_types(&[TokenType::If]) {
             return self.if_statement();
         }
 
-        if self.match_types(&[TokenType::While]) {
-            return self.while_statement();
+        if self.match_types(&[TokenType::LeftBrace]) {
+            return Ok(Statement::block(self.block()?))
         }
 
-        if self.match_types(&[TokenType::For]) {
-            return self.for_statement();
+        if self.match_types(&[TokenType::While]) {
+            return self.while_statement();
         }
 
         if self.match_types(&[TokenType::Return]) {
@@ -224,7 +224,8 @@ impl Parser {
             ]);
         }
 
-        let condition = condition.unwrap_or(Expr::literal(Literal::Boolean(true)));
+        let condition = condition.unwrap_or_else(|| Expr::literal(Literal::Boolean(true)));
+
         body = Statement::r#while(condition, body);
 
         if let Some(init) = initializer {

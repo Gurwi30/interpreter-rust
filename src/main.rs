@@ -8,16 +8,16 @@ mod environment;
 mod function;
 mod resolver;
 
-use std::cell::{Ref, RefCell};
 use crate::interpreter::Interpreter;
 use crate::parser::Parser;
+use crate::resolver::Resolver;
 use crate::tokenizer::{Token, Tokenizer};
+use std::cell::RefCell;
 use std::env;
 use std::fs;
 use std::io::{self, Write};
 use std::process::exit;
 use std::rc::Rc;
-use crate::resolver::Resolver;
 
 fn main() {
      let args: Vec<String> = env::args().collect();
@@ -111,7 +111,7 @@ fn eval(file_contents: &String) {
 fn run(file_contents: &String) {
     let tokens = tokenize(file_contents.to_string());
     let parse_res = Parser::new(tokens).parse();
-
+    
     match parse_res {
         Ok(statements) => {
             let interpreter = Rc::new(RefCell::new(Interpreter::new()));
@@ -129,6 +129,7 @@ fn run(file_contents: &String) {
                 exit(70);
             };
         },
+        
         Err(err) => {
             eprintln!("{err}");
             exit(65)

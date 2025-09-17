@@ -9,7 +9,7 @@ use crate::tokenizer::Token;
 #[derive(PartialEq)]
 pub struct Environment {
     values: HashMap<String, Value>,
-    enclosing: Option<Rc<RefCell<Environment>>>,
+    pub(crate) enclosing: Option<Rc<RefCell<Environment>>>,
 }
 
 impl Environment {
@@ -53,6 +53,7 @@ impl Environment {
                 let borrow = current_env.borrow();
                 borrow.enclosing.clone().expect("No enclosing environment")
             };
+            
             current_env = next;
         }
         
@@ -93,6 +94,10 @@ impl Environment {
     pub fn debug_print(&self, depth: usize) {
         let indent = "  ".repeat(depth);
         println!("{}Environment at depth {}: {:?}", indent, depth, self.values);
+
+        for (key, val) in &self.values {
+            println!("{}\t{:p}\t{}", indent, key.as_str(), val);
+        }
 
         if let Some(parent) = &self.enclosing {
             parent.borrow().debug_print(depth + 1);

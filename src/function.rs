@@ -95,7 +95,7 @@ where
     F: 'static + Fn(Vec<Value>) -> CallResult,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "<fn builtin {}>", self.name)
+        write!(f, "builtin {}", self.name)
     }
 }
 

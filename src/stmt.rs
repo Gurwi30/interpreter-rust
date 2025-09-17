@@ -3,7 +3,7 @@ use std::fmt;
 use std::fmt::Formatter;
 use crate::tokenizer::Token;
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum Statement {
     Expression {
         expr: Expr,

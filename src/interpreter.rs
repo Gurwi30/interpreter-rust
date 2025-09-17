@@ -74,6 +74,7 @@ pub enum Value {
     Nil,
 }
 
+
 impl Debug for Value {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
@@ -125,15 +126,11 @@ impl Value {
     }
 }
 
-// Use a simple ID system instead of references to expressions
-type ExprId = usize;
-
 #[derive(Clone, PartialEq)]
 pub struct Interpreter {
     pub globals: Rc<RefCell<Environment>>,
     pub environment: Rc<RefCell<Environment>>,
-    pub locals: HashMap<ExprId, usize>,
-    expr_counter: ExprId,
+    pub locals: HashMap<Expr, usize>
 }
 
 impl Interpreter {
@@ -166,8 +163,7 @@ impl Interpreter {
         Interpreter {
             globals: Rc::clone(&globals_rc),
             environment: globals_rc,
-            locals: HashMap::new(),
-            expr_counter: 0,
+            locals: HashMap::new()
         }
     }
 
@@ -178,13 +174,8 @@ impl Interpreter {
         Ok(())
     }
 
-    // For now, we'll need to modify how resolve works
-    // You'll need to add IDs to your expressions or use a different approach
-    pub fn resolve(&mut self, expr: &Expr, depth: usize) {
-        // This is a temporary solution - you'll need to implement proper ID tracking
-        // For now, we'll use the pointer address as a unique identifier
-        let expr_id = expr as *const Expr as usize;
-        self.locals.insert(expr_id, depth);
+    pub fn resolve(&mut self, expr: Expr, depth: usize) {
+        self.locals.insert(expr, depth);
     }
 
     fn run_single(&mut self, statement: &Statement) -> ExecResult {
@@ -230,7 +221,7 @@ impl Interpreter {
                     params.clone(),
                     body.clone(),
                 ), self.environment.clone());
-
+                
                 self.environment
                     .borrow_mut()
                     .define(name.lexeme.clone(), Value::Callable(Rc::new(func)));
@@ -253,18 +244,18 @@ impl Interpreter {
 
     pub fn execute_block(&mut self, statements: &[Statement], new_env: Rc<RefCell<Environment>>) -> ExecResult {
         let previous = Rc::clone(&self.environment);
-
+    
         self.environment = Rc::clone(&new_env);
-
+    
         let result = (|| {
             for statement in statements {
                 self.run_single(statement)?;
             }
             Ok(())
         })();
-
+    
         self.environment = previous;
-
+    
         result
     }
 
@@ -297,7 +288,7 @@ impl Interpreter {
             Expr::Binary { left, operator, right } => {
                 let left = self.eval(left)?;
                 let right = self.eval(right)?;
-
+                
                 match (&left, &right, &operator.token_type) {
                     (Value::Float(l), Value::Float(r), TokenType::Plus) => Ok(Value::Float(l + r)),
                     (Value::Float(l), Value::Float(r), TokenType::Minus) => Ok(Value::Float(l - r)),
@@ -332,9 +323,8 @@ impl Interpreter {
 
             Expr::Assign { name, value } => {
                 let res = self.eval(value)?;
-                let expr_id = expr as *const Expr as usize;
 
-                match self.locals.get(&expr_id) {
+                match self.locals.get(expr) {
                     Some(distance) => {
                         Environment::assign_at(self.environment.clone(), *distance, name, &res);
                     }
@@ -342,7 +332,7 @@ impl Interpreter {
                 }
 
                 Ok(res)
-            }
+             }
 
             Expr::Logical { left, operator, right } => {
                 let left = self.eval(left)?;
@@ -396,11 +386,25 @@ impl Interpreter {
     }
 
     fn look_up_var(&self, name: &Token, expr: &Expr) -> Result<Value, ExecError> {
-        let expr_id = expr as *const Expr as usize;
-        match self.locals.get(&expr_id) {
-            Some(distance) => match Environment::get_at(self.environment.clone(), *distance, &name.lexeme.clone()) {
+        match self.locals.get(expr) {
+            Some(distance) => match Environment::get_at(self.environment.clone(), *distance, name.lexeme.as_str()) {
                 Some(val) => Ok(val),
                 None => {
+                    println!("Env");
+                    println!("Current environment {:p}", Rc::as_ptr(&self.environment));
+                    println!("Dept {}, Lexeme {}", distance, name.lexeme);
+                    self.environment.borrow().debug_print(0);
+                    
+                    println!("Ancestor");
+                    
+                    Environment::ancestor(Rc::clone(&self.environment), *distance).borrow().debug_print(*distance);
+                    
+                    println!("Search {:p}", name.lexeme.as_str());
+                    
+                    if let Some(v) = Environment::get_at(self.environment.clone(), *distance, "hello") {
+                        println!("Found {}", v);
+                    } 
+                    
                     Err(ExecError::Runtime(
                         RuntimeError::new(name.clone(), format!("Undefined variable '{}'", name.lexeme)), )
                     )
@@ -408,6 +412,19 @@ impl Interpreter {
             },
             None => self.globals.borrow().get(name)
         }
+    }
+    
+    fn env_depth(env: Rc<RefCell<Environment>>) -> usize {
+        let mut depth = 0;
+        let mut current = Some(env);
+
+        while let Some(env) = current {
+            let env_ref = env.borrow();
+            current = env_ref.enclosing.clone();
+            depth += 1;
+        }
+
+        depth
     }
 }
 

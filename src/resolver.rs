@@ -89,12 +89,11 @@ impl Resolver {
 
     fn resolve_local(&mut self, expr: &Expr, name: &Token) {
         for i in (0..self.scopes.len()).rev() {
-            if !self.scopes.get(i).unwrap().contains_key(name.lexeme.as_str()) {
+            if !self.scopes[i].contains_key(name.lexeme.as_str()) {
                 continue;
             }
 
-            // Use borrow_mut() to access the interpreter
-            self.interpreter.borrow_mut().resolve(expr, self.scopes.len() - 1 - i);
+            self.interpreter.borrow_mut().resolve(expr.clone(), self.scopes.len() - 1 - i);
             return;
         }
     }
@@ -105,6 +104,8 @@ impl Resolver {
                 self.begin_scope();
                 self.resolve(statements)?;
                 self.end_scope();
+                
+                println!("{:?}", statements);
 
                 Ok(())
             },
@@ -166,9 +167,10 @@ impl Resolver {
             },
 
             Statement::While { condition, body } => {
+                println!("{condition} {body}");
                 self.resolve_expr(condition)?;
                 self.resolve_stmt(body)?;
-
+                
                 Ok(())
             }
         }
